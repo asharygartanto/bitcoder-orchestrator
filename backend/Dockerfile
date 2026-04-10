@@ -1,17 +1,16 @@
 FROM node:20-alpine AS builder
 
-# Install build dependencies for native modules (like bcrypt) and openssl for Prisma
 RUN apk add --no-cache python3 make g++ openssl
 
 WORKDIR /app
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm install
-COPY . .
 RUN npx prisma generate
+COPY . .
 RUN npm run build
 
 FROM node:20-alpine AS runner
-# Runner also needs openssl for Prisma runtime
 RUN apk add --no-cache openssl
 
 WORKDIR /app
