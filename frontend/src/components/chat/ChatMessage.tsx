@@ -1,5 +1,5 @@
 import ReactMarkdown from 'react-markdown';
-import { User, Bot, FileText, ExternalLink } from 'lucide-react';
+import { Bot, FileText, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 import type { ChatMessage as ChatMessageType } from '../../types';
 

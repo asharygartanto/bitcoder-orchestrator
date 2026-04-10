@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, Plus, Trash2, Edit3, ExternalLink, Check, X } from 'lucide-react';
+import { Zap, Plus, Trash2, Edit3, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 import type { ApiConfig } from '../../types';
 

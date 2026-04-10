@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { sendMessage } from '../../services/chat';
-import { createSession } from '../../services/chat';
+import { useState, useRef, useEffect } from 'react';
+import { sendMessage, createSession } from '../../services/chat';
 import { Send, Loader2, Bot, FileText, ExternalLink } from 'lucide-react';
 import type { ChatMessage } from '../../types';
 import ReactMarkdown from 'react-markdown';

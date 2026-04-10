@@ -17,7 +17,7 @@ import type { Document, ApiConfig, ProcessingStatus } from '../../types';
 import DocumentList from './DocumentList';
 import ApiConfigList from './ApiConfigList';
 import TestChatBox from './TestChatBox';
-import { Upload, Database, Zap, MessageSquare, RefreshCw } from 'lucide-react';
+import { Upload, Zap, MessageSquare, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
