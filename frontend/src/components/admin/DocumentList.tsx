@@ -69,11 +69,11 @@ export default function DocumentList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-text-primary">Documents</h3>
+        <h3 className="text-sm font-semibold text-bc-text-dark">Documents</h3>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-accent-dark hover:shadow-glow disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-bc-primary px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-bc-primary-dark disabled:opacity-50"
         >
           {uploading ? (
             <Loader2 size={14} className="animate-spin" />
@@ -100,15 +100,15 @@ export default function DocumentList({
       </div>
 
       {documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border))] bg-surface-2/30 py-12">
-          <FileText size={32} className="mb-3 text-text-muted" />
-          <p className="text-sm text-text-secondary">No documents uploaded yet</p>
-          <p className="mt-1 text-xs text-text-muted">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-bc-border bg-bc-bg-muted/30 py-12">
+          <FileText size={32} className="mb-3 text-bc-text-muted" />
+          <p className="text-sm text-bc-text-secondary">No documents uploaded yet</p>
+          <p className="mt-1 text-xs text-bc-text-muted">
             Upload PDF, Word, TXT, or Markdown files
           </p>
           <button
             onClick={() => fileRef.current?.click()}
-            className="mt-4 flex items-center gap-2 rounded-lg bg-accent/10 px-4 py-2 text-xs font-medium text-accent-light transition-all hover:bg-accent/20"
+            className="mt-4 flex items-center gap-2 rounded-lg bg-bc-primary/10 px-4 py-2 text-xs font-medium text-bc-primary transition-all hover:bg-bc-primary/10"
           >
             <Upload size={14} /> Upload First Document
           </button>
@@ -123,13 +123,13 @@ export default function DocumentList({
             return (
               <div
                 key={doc.id}
-                className="group flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-surface-2 px-4 py-3 transition-all hover:border-[hsl(var(--border-hover))] top-light"
+                className="group flex items-center gap-3 rounded-xl border border-bc-border bg-bc-bg-muted px-4 py-3 transition-all hover:border-bc-border-hover"
               >
-                <FileText size={20} className="shrink-0 text-accent" />
+                <FileText size={20} className="shrink-0 text-bc-primary" />
 
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-text-primary">{doc.name}</p>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
+                  <p className="truncate text-sm font-medium text-bc-text-dark">{doc.name}</p>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-bc-text-muted">
                     <span>{(doc.fileSize / 1024).toFixed(1)} KB</span>
                     <span>·</span>
                     <span className="flex items-center gap-1">
@@ -141,16 +141,16 @@ export default function DocumentList({
                     <div className="mt-2">
                       <div className="flex items-center gap-2 text-xs">
                         <span className={cfg.color}>{cfg.icon}</span>
-                        <span className="text-text-secondary">{status.phase}...</span>
-                        <span className="text-text-muted">({status.progress}%)</span>
+                        <span className="text-bc-text-secondary">{status.phase}...</span>
+                        <span className="text-bc-text-muted">({status.progress}%)</span>
                       </div>
-                      <div className="mt-1 h-1 w-full rounded-full bg-surface-4">
+                      <div className="mt-1 h-1 w-full rounded-full bg-bc-border">
                         <div
-                          className="h-1 rounded-full bg-accent transition-all duration-500"
+                          className="h-1 rounded-full bg-bc-primary transition-all duration-500"
                           style={{ width: `${status.progress}%` }}
                         />
                       </div>
-                      <p className="mt-0.5 text-xs text-text-muted">{status.message}</p>
+                      <p className="mt-0.5 text-xs text-bc-text-muted">{status.message}</p>
                     </div>
                   )}
                 </div>
@@ -167,14 +167,14 @@ export default function DocumentList({
                       setReplaceId(doc.id);
                       replaceRef.current?.click();
                     }}
-                    className="rounded-lg p-1.5 text-text-muted hover:bg-surface-4 hover:text-text-secondary transition-all"
+                    className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-border hover:text-bc-text-secondary transition-all"
                     title="Replace"
                   >
                     <RefreshCw size={14} />
                   </button>
                   <button
                     onClick={() => onDelete(doc.id)}
-                    className="rounded-lg p-1.5 text-text-muted hover:bg-destructive/10 hover:text-destructive transition-all"
+                    className="rounded-lg p-1.5 text-bc-text-muted hover:bg-red-50 hover:text-red-500 transition-all"
                     title="Delete"
                   >
                     <Trash2 size={14} />

@@ -127,11 +127,11 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full">
-      <div className="w-72 border-r border-[hsl(var(--border))] bg-surface-1 flex flex-col">
+      <div className="w-72 border-r border-bc-border bg-bc-bg-subtle flex flex-col">
         <div className="p-3">
           <button
             onClick={handleNewChat}
-            className="flex w-full items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-surface-2 px-3 py-2.5 text-sm font-medium text-text-secondary transition-all hover:bg-surface-3 hover:text-text-primary top-light"
+            className="flex w-full items-center gap-2 rounded-lg border border-bc-border bg-white px-3 py-2.5 text-sm font-medium text-bc-text-secondary transition-all hover:bg-bc-bg-muted hover:text-bc-text-dark shadow-sm"
           >
             <MessageSquarePlus size={18} />
             New Chat

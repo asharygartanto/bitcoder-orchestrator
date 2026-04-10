@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { login as loginApi } from '../services/auth';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import BitcoderLogo from '../components/common/BitcoderLogo';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,8 +35,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/favicon.svg" alt="Bitcoder" className="mx-auto mb-4 h-16 w-16" />
-          <h1 className="text-2xl font-bold text-bc-primary">Bitcoder Orchestrator</h1>
+          <BitcoderLogo className="mx-auto mb-4 h-16 w-16" />
+          <h1 className="text-2xl font-bold text-bc-text-dark">Bitcoder Orchestrator</h1>
           <p className="mt-2 text-sm text-bc-text-secondary">Sign in to continue</p>
         </div>
 

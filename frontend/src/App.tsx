@@ -78,8 +78,8 @@ function AuthCallback() {
   }, [token, setAuth]);
 
   return (
-    <div className="flex h-screen items-center justify-center bg-surface-0">
-      <div className="animate-pulse-subtle text-text-secondary">Authenticating...</div>
+    <div className="flex h-screen items-center justify-center bg-white">
+      <div className="animate-pulse-subtle text-bc-text-secondary">Authenticating...</div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import clsx from 'clsx';
+import BitcoderLogo from '../common/BitcoderLogo';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -25,20 +26,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="flex h-screen overflow-hidden bg-white">
       <aside
         className={clsx(
-          'flex flex-col border-r border-bc-border bg-white transition-all duration-300',
+          'flex flex-col border-r border-bc-border bg-bc-bg-subtle transition-all duration-300',
           sidebarCollapsed ? 'w-16' : 'w-64',
         )}
       >
         <div className="flex h-14 items-center justify-between border-b border-bc-border px-4">
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2">
-              <img src="/favicon.svg" alt="Bitcoder" className="h-8 w-8" />
-              <span className="text-sm font-semibold text-bc-primary">Bitcoder Orchestrator</span>
+              <BitcoderLogo className="h-8 w-8" />
+              <span className="text-sm font-semibold text-bc-text-dark">Bitcoder Orchestrator</span>
             </div>
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-bg-muted hover:text-bc-text-secondary transition-colors"
+            className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-bg-muted hover:text-bc-text transition-colors"
           >
             {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>

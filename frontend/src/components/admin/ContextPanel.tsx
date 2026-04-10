@@ -146,18 +146,18 @@ export default function ContextPanel({ context, onUpdate }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-[hsl(var(--border))] bg-surface-1 px-6 py-4">
+      <div className="border-b border-bc-border bg-bc-bg-subtle px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">{context.name}</h2>
+            <h2 className="text-lg font-semibold text-bc-text-dark">{context.name}</h2>
             {context.description && (
-              <p className="mt-0.5 text-sm text-text-tertiary">{context.description}</p>
+              <p className="mt-0.5 text-sm text-bc-text-muted">{context.description}</p>
             )}
           </div>
           <button
             onClick={handleReindex}
             disabled={reindexing}
-            className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-surface-2 px-3 py-2 text-xs font-medium text-text-secondary transition-all hover:bg-surface-3 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg border border-bc-border bg-bc-bg-muted px-3 py-2 text-xs font-medium text-bc-text-secondary transition-all hover:bg-bc-bg-dark disabled:opacity-50"
           >
             <RefreshCw size={14} className={reindexing ? 'animate-spin' : ''} />
             {reindexing ? 'Re-indexing...' : 'Re-index All'}
@@ -172,8 +172,8 @@ export default function ContextPanel({ context, onUpdate }: Props) {
               className={clsx(
                 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all',
                 tab === t.key
-                  ? 'bg-accent/10 text-accent-light'
-                  : 'text-text-tertiary hover:bg-surface-3 hover:text-text-secondary',
+                  ? 'bg-bc-primary/10 text-bc-primary'
+                  : 'text-bc-text-muted hover:bg-bc-bg-dark hover:text-bc-text-secondary',
               )}
             >
               {t.icon} {t.label}

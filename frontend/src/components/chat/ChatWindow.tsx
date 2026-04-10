@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import type { ChatMessage as ChatMessageType, SourceReference } from '../../types';
 import ChatMessage from './ChatMessage';
 import TypingIndicator from './TypingIndicator';
-import { Bot } from 'lucide-react';
+import BitcoderLogo from '../common/BitcoderLogo';
 
 interface Props {
   messages: ChatMessageType[];
@@ -27,11 +27,9 @@ export default function ChatWindow({
     return (
       <div className="flex flex-1 items-center justify-center p-8">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10">
-            <Bot size={32} className="text-accent" />
-          </div>
-          <h2 className="text-xl font-semibold text-text-primary">How can I help you?</h2>
-          <p className="mt-2 text-sm text-text-tertiary max-w-md">
+          <BitcoderLogo className="h-16 w-16 text-bc-text-muted mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-bc-text-dark">How can I help you?</h2>
+          <p className="mt-2 text-sm text-bc-text-muted max-w-md">
             Select a context and start asking questions. I'll search through your documents and APIs to provide accurate answers.
           </p>
         </div>

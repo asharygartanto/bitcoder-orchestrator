@@ -16,7 +16,7 @@ export default function ContextSelector({ contexts, selected, onSelect }: Props)
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-[hsl(var(--border))] bg-surface-2 px-3 py-2 text-xs text-text-secondary transition-all hover:border-[hsl(var(--border-hover))]"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-bc-border bg-bc-bg-muted px-3 py-2 text-xs text-bc-text-secondary transition-all hover:border-bc-border-hover"
       >
         <span className="truncate">
           {selected ? selected.name : 'All contexts'}
@@ -30,12 +30,12 @@ export default function ContextSelector({ contexts, selected, onSelect }: Props)
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-[hsl(var(--border))] bg-surface-2 py-1 shadow-lg animate-fade-in">
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-bc-border bg-bc-bg-muted py-1 shadow-lg animate-fade-in">
             <button
               onClick={() => { onSelect(null); setOpen(false); }}
               className={clsx(
-                'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-surface-3',
-                !selected ? 'text-accent-light' : 'text-text-secondary',
+                'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-bc-bg-dark',
+                !selected ? 'text-bc-primary' : 'text-bc-text-secondary',
               )}
             >
               All contexts
@@ -45,8 +45,8 @@ export default function ContextSelector({ contexts, selected, onSelect }: Props)
                 key={ctx.id}
                 onClick={() => { onSelect(ctx); setOpen(false); }}
                 className={clsx(
-                  'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-surface-3',
-                  selected?.id === ctx.id ? 'text-accent-light' : 'text-text-secondary',
+                  'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-bc-bg-dark',
+                  selected?.id === ctx.id ? 'text-bc-primary' : 'text-bc-text-secondary',
                 )}
               >
                 {ctx.name}

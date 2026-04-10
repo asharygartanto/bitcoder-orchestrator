@@ -48,13 +48,13 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-full">
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-surface-1 flex flex-col">
-        <div className="p-4 border-b border-[hsl(var(--border))]">
+      <div className="w-80 border-r border-bc-border bg-bc-bg-subtle flex flex-col">
+        <div className="p-4 border-b border-bc-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-text-primary">Knowledge Contexts</h2>
+            <h2 className="text-sm font-semibold text-bc-text-dark">Knowledge Contexts</h2>
             <button
               onClick={() => setShowCreate(!showCreate)}
-              className="flex items-center gap-1 rounded-lg bg-accent/10 px-2.5 py-1.5 text-xs font-medium text-accent-light transition-all hover:bg-accent/20"
+              className="flex items-center gap-1 rounded-lg bg-bc-primary/10 px-2.5 py-1.5 text-xs font-medium text-bc-primary transition-all hover:bg-bc-primary/10"
             >
               <Plus size={14} /> New
             </button>
@@ -66,24 +66,24 @@ export default function AdminPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Context name (e.g. Cuti)"
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent/50"
+                className="w-full rounded-lg border border-bc-border bg-bc-bg-muted px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
               />
               <input
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
                 placeholder="Description (optional)"
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent/50"
+                className="w-full rounded-lg border border-bc-border bg-bc-bg-muted px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleCreate}
-                  className="flex-1 rounded-lg bg-accent py-1.5 text-xs font-semibold text-white hover:bg-accent-dark transition-all"
+                  className="flex-1 rounded-lg bg-bc-primary py-1.5 text-xs font-semibold text-white hover:bg-bc-primary-dark transition-all"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => { setShowCreate(false); setNewName(''); setNewDesc(''); }}
-                  className="rounded-lg border border-[hsl(var(--border))] px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-3 transition-all"
+                  className="rounded-lg border border-bc-border px-3 py-1.5 text-xs text-bc-text-secondary hover:bg-bc-bg-dark transition-all"
                 >
                   Cancel
                 </button>
@@ -94,11 +94,11 @@ export default function AdminPage() {
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {loading ? (
-            <div className="p-4 text-center text-xs text-text-muted">Loading...</div>
+            <div className="p-4 text-center text-xs text-bc-text-muted">Loading...</div>
           ) : contexts.length === 0 ? (
             <div className="p-4 text-center">
-              <FolderOpen size={24} className="mx-auto mb-2 text-text-muted" />
-              <p className="text-xs text-text-muted">No contexts yet. Create one above.</p>
+              <FolderOpen size={24} className="mx-auto mb-2 text-bc-text-muted" />
+              <p className="text-xs text-bc-text-muted">No contexts yet. Create one above.</p>
             </div>
           ) : (
             contexts.map((ctx) => (
@@ -107,20 +107,20 @@ export default function AdminPage() {
                 className={clsx(
                   'group flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer transition-all',
                   activeContext?.id === ctx.id
-                    ? 'bg-accent/10 text-accent-light glow-border'
-                    : 'text-text-secondary hover:bg-surface-3 hover:text-text-primary',
+                    ? 'bg-bc-primary/10 text-bc-primary glow-border'
+                    : 'text-bc-text-secondary hover:bg-bc-bg-dark hover:text-bc-text-dark',
                 )}
                 onClick={() => setActiveContext(ctx)}
               >
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium">{ctx.name}</p>
-                  <p className="truncate text-xs text-text-muted">
+                  <p className="truncate text-xs text-bc-text-muted">
                     {ctx._count?.documents || 0} docs · {ctx._count?.apiConfigs || 0} APIs
                   </p>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(ctx.id); }}
-                  className="shrink-0 rounded p-1 text-text-muted opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+                  className="shrink-0 rounded p-1 text-bc-text-muted opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -136,9 +136,9 @@ export default function AdminPage() {
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <FolderOpen size={48} className="mx-auto mb-3 text-text-muted" />
-              <h3 className="text-lg font-semibold text-text-secondary">Select a Context</h3>
-              <p className="mt-1 text-sm text-text-muted">
+              <FolderOpen size={48} className="mx-auto mb-3 text-bc-text-muted" />
+              <h3 className="text-lg font-semibold text-bc-text-secondary">Select a Context</h3>
+              <p className="mt-1 text-sm text-bc-text-muted">
                 Choose or create a context to manage documents and API configurations.
               </p>
             </div>

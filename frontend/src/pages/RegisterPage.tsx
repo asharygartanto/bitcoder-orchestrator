@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { register as registerApi } from '../services/auth';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import BitcoderLogo from '../components/common/BitcoderLogo';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -37,8 +38,8 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/favicon.svg" alt="Bitcoder" className="mx-auto mb-4 h-16 w-16" />
-          <h1 className="text-2xl font-bold text-bc-primary">Bitcoder Orchestrator</h1>
+          <BitcoderLogo className="mx-auto mb-4 h-16 w-16" />
+          <h1 className="text-2xl font-bold text-bc-text-dark">Bitcoder Orchestrator</h1>
           <p className="mt-2 text-sm text-bc-text-secondary">Create your account</p>
         </div>
 
@@ -66,9 +67,9 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-secondary">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-bc-text-dark">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-bc-text-muted" size={18} />
                 <input
                   type="email"
                   value={email}
@@ -81,14 +82,14 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-secondary">Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-bc-text-dark">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-bc-text-muted" size={18} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-surface-2 py-2.5 pl-10 pr-10 text-sm text-text-primary placeholder-text-muted outline-none transition-all focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+                  className="w-full rounded-lg border border-bc-border bg-bc-bg-subtle py-2.5 pl-10 pr-10 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none transition-all focus:border-bc-primary focus:ring-1 focus:ring-bc-primary/20"
                   placeholder="Min. 8 characters"
                   required
                   minLength={8}
@@ -96,7 +97,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-bc-text-muted hover:text-bc-text-secondary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -106,15 +107,15 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-dark hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-bc-primary py-2.5 text-sm font-semibold text-white transition-all hover:bg-bc-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-text-tertiary">
+          <p className="mt-6 text-center text-sm text-bc-text-muted">
             Already have an account?{' '}
-            <Link to="/login" className="text-accent-light hover:underline">
+            <Link to="/login" className="text-bc-primary hover:underline">
               Sign in
             </Link>
           </p>
