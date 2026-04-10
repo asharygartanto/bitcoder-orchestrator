@@ -16,6 +16,10 @@ class VectorStore:
                 host=settings.CHROMA_HOST,
                 port=settings.CHROMA_PORT,
             )
+            try:
+                self._client.heartbeat()
+            except Exception:
+                pass
         return self._client
 
     def _collection_name(self, organization_id: str, context_id: str) -> str:
