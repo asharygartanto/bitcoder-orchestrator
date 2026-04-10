@@ -22,20 +22,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-white">
       <aside
         className={clsx(
-          'flex flex-col border-r border-[hsl(var(--border))] bg-surface-1 transition-all duration-300',
+          'flex flex-col border-r border-bc-border bg-white transition-all duration-300',
           sidebarCollapsed ? 'w-16' : 'w-64',
         )}
       >
-        <div className="flex h-14 items-center justify-between border-b border-[hsl(var(--border))] px-4">
+        <div className="flex h-14 items-center justify-between border-b border-bc-border px-4">
           {!sidebarCollapsed && (
-            <span className="text-lg font-semibold text-accent-light">Bitcoder AI</span>
+            <div className="flex items-center gap-2">
+              <img src="/favicon.svg" alt="Bitcoder" className="h-8 w-8" />
+              <span className="text-sm font-semibold text-bc-primary">Bitcoder Orchestrator</span>
+            </div>
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="rounded-lg p-1.5 text-text-tertiary hover:bg-surface-3 hover:text-text-primary transition-colors"
+            className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-bg-muted hover:text-bc-text-secondary transition-colors"
           >
             {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
@@ -60,27 +63,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
           )}
         </nav>
 
-        <div className="border-t border-[hsl(var(--border))] p-3">
+        <div className="border-t border-bc-border p-3">
           <div
             className={clsx(
               'flex items-center gap-3',
               sidebarCollapsed && 'justify-center',
             )}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-accent text-sm font-medium">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bc-primary/10 text-bc-primary text-sm font-medium">
               {user?.name?.[0]?.toUpperCase() || user?.email[0]?.toUpperCase() || '?'}
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-text-primary">
+                <p className="truncate text-sm font-medium text-bc-text-dark">
                   {user?.name || user?.email}
                 </p>
-                <p className="truncate text-xs text-text-tertiary">{user?.organization?.name}</p>
+                <p className="truncate text-xs text-bc-text-muted">{user?.organization?.name}</p>
               </div>
             )}
             <button
               onClick={logout}
-              className="rounded-lg p-1.5 text-text-tertiary hover:bg-surface-3 hover:text-destructive transition-colors"
+              className="rounded-lg p-1.5 text-bc-text-muted hover:bg-red-50 hover:text-red-500 transition-colors"
               title="Logout"
             >
               <LogOut size={18} />
@@ -89,7 +92,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main className="flex-1 overflow-hidden bg-white">{children}</main>
     </div>
   );
 }
@@ -113,8 +116,8 @@ function NavLink({
       className={clsx(
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
         active
-          ? 'bg-accent/10 text-accent-light glow-border'
-          : 'text-text-secondary hover:bg-surface-3 hover:text-text-primary',
+          ? 'bg-bc-primary/10 text-bc-primary'
+          : 'text-bc-text-secondary hover:bg-bc-bg-muted hover:text-bc-text-dark',
         collapsed && 'justify-center px-2',
       )}
     >

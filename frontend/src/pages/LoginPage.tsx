@@ -31,30 +31,31 @@ export default function LoginPage() {
   const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/auth/google`;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-0 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-accent-light">Bitcoder AI</h1>
-          <p className="mt-2 text-text-secondary">Sign in to continue</p>
+          <img src="/favicon.svg" alt="Bitcoder" className="mx-auto mb-4 h-16 w-16" />
+          <h1 className="text-2xl font-bold text-bc-primary">Bitcoder Orchestrator</h1>
+          <p className="mt-2 text-sm text-bc-text-secondary">Sign in to continue</p>
         </div>
 
-        <div className="rounded-xl border border-[hsl(var(--border))] bg-surface-1 p-8 top-light">
+        <div className="rounded-xl border border-bc-border bg-white p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive-light">
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-secondary">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-bc-text-dark">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-bc-text-muted" size={18} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-surface-2 py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder-text-muted outline-none transition-all focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+                  className="w-full rounded-lg border border-bc-border bg-bc-bg-subtle py-2.5 pl-10 pr-4 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none transition-all focus:border-bc-primary focus:ring-1 focus:ring-bc-primary/20"
                   placeholder="your@email.com"
                   required
                 />
@@ -62,21 +63,21 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-secondary">Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-bc-text-dark">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-bc-text-muted" size={18} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-surface-2 py-2.5 pl-10 pr-10 text-sm text-text-primary placeholder-text-muted outline-none transition-all focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+                  className="w-full rounded-lg border border-bc-border bg-bc-bg-subtle py-2.5 pl-10 pr-10 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none transition-all focus:border-bc-primary focus:ring-1 focus:ring-bc-primary/20"
                   placeholder="Enter password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-bc-text-muted hover:text-bc-text-secondary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -86,21 +87,21 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-dark hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-bc-primary py-2.5 text-sm font-semibold text-white transition-all hover:bg-bc-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-[hsl(var(--border))]" />
-            <span className="text-xs text-text-muted">or</span>
-            <div className="h-px flex-1 bg-[hsl(var(--border))]" />
+            <div className="h-px flex-1 bg-bc-border" />
+            <span className="text-xs text-bc-text-muted">or</span>
+            <div className="h-px flex-1 bg-bc-border" />
           </div>
 
           <a
             href={googleLoginUrl}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-surface-2 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-surface-3 hover:border-[hsl(var(--border-hover))]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-bc-border bg-white py-2.5 text-sm font-medium text-bc-text-dark transition-all hover:bg-bc-bg-subtle"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -111,9 +112,9 @@ export default function LoginPage() {
             Sign in with Google
           </a>
 
-          <p className="mt-6 text-center text-sm text-text-tertiary">
+          <p className="mt-6 text-center text-sm text-bc-text-muted">
             Don't have an account?{' '}
-            <Link to="/register" className="text-accent-light hover:underline">
+            <Link to="/register" className="text-bc-primary hover:underline">
               Sign up
             </Link>
           </p>
