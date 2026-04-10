@@ -17,12 +17,9 @@ services:
       dockerfile: Dockerfile
     container_name: bitcoder-backend
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3002:3002"
+    network_mode: host
     env_file:
       - .env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       chromadb:
         condition: service_started
@@ -30,8 +27,6 @@ services:
         condition: service_started
     volumes:
       - upload_data:/app/uploads
-    networks:
-      - bitcoder-network
 
   rag-engine:
     build:
