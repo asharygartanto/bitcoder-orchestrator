@@ -25,17 +25,17 @@ export class ContextController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async create(@Req() req: Request, @Body() dto: CreateContextDto) {
-    return this.contextService.create(req.user['organizationId'], dto);
+    return this.contextService.create(req.user!.organizationId, dto);
   }
 
   @Get()
   async findAll(@Req() req: Request) {
-    return this.contextService.findAll(req.user['organizationId']);
+    return this.contextService.findAll(req.user!.organizationId);
   }
 
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    return this.contextService.findOne(req.user['organizationId'], id);
+    return this.contextService.findOne(req.user!.organizationId, id);
   }
 
   @Put(':id')
@@ -45,12 +45,12 @@ export class ContextController {
     @Param('id') id: string,
     @Body() dto: UpdateContextDto,
   ) {
-    return this.contextService.update(req.user['organizationId'], id, dto);
+    return this.contextService.update(req.user!.organizationId, id, dto);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async remove(@Req() req: Request, @Param('id') id: string) {
-    return this.contextService.remove(req.user['organizationId'], id);
+    return this.contextService.remove(req.user!.organizationId, id);
   }
 }

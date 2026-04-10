@@ -7,10 +7,8 @@ import {
   Req,
   UseGuards,
   UploadedFile,
-  Interceptor,
   UseInterceptors,
   Body,
-  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
@@ -35,9 +33,9 @@ export class DocumentController {
     @Body('name') name?: string,
   ) {
     return this.documentService.upload(
-      req.user['organizationId'],
+      req.user!.organizationId,
       contextId,
-      req.user['id'],
+      req.user!.id,
       file,
       name || file.originalname,
     );
@@ -48,7 +46,7 @@ export class DocumentController {
     @Req() req: Request,
     @Param('documentId') documentId: string,
   ) {
-    return this.documentService.getStatus(documentId, req.user['organizationId']);
+    return this.documentService.getStatus(documentId, req.user!.organizationId);
   }
 
   @Get('context/:contextId')
@@ -56,7 +54,7 @@ export class DocumentController {
     @Req() req: Request,
     @Param('contextId') contextId: string,
   ) {
-    return this.documentService.findByContext(req.user['organizationId'], contextId);
+    return this.documentService.findByContext(req.user!.organizationId, contextId);
   }
 
   @Delete(':documentId')
@@ -65,7 +63,7 @@ export class DocumentController {
     @Req() req: Request,
     @Param('documentId') documentId: string,
   ) {
-    return this.documentService.remove(documentId, req.user['organizationId']);
+    return this.documentService.remove(documentId, req.user!.organizationId);
   }
 
   @Post('replace/:documentId')
@@ -79,8 +77,8 @@ export class DocumentController {
   ) {
     return this.documentService.replace(
       documentId,
-      req.user['organizationId'],
-      req.user['id'],
+      req.user!.organizationId,
+      req.user!.id,
       file,
       name || file.originalname,
     );

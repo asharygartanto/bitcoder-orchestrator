@@ -21,8 +21,8 @@ export class ChatController {
   @Post('sessions')
   async createSession(@Req() req: Request, @Body() dto: CreateSessionDto) {
     return this.chatService.createSession(
-      req.user['organizationId'],
-      req.user['id'],
+      req.user!.organizationId,
+      req.user!.id,
       dto,
     );
   }
@@ -30,26 +30,26 @@ export class ChatController {
   @Get('sessions')
   async getSessions(@Req() req: Request) {
     return this.chatService.findSessions(
-      req.user['organizationId'],
-      req.user['id'],
+      req.user!.organizationId,
+      req.user!.id,
     );
   }
 
   @Get('sessions/:sessionId')
   async getSession(@Req() req: Request, @Param('sessionId') sessionId: string) {
     return this.chatService.findSession(
-      req.user['organizationId'],
+      req.user!.organizationId,
       sessionId,
-      req.user['id'],
+      req.user!.id,
     );
   }
 
   @Delete('sessions/:sessionId')
   async deleteSession(@Req() req: Request, @Param('sessionId') sessionId: string) {
     return this.chatService.deleteSession(
-      req.user['organizationId'],
+      req.user!.organizationId,
       sessionId,
-      req.user['id'],
+      req.user!.id,
     );
   }
 
@@ -60,9 +60,9 @@ export class ChatController {
     @Body() dto: SendMessageDto,
   ) {
     return this.chatService.sendMessage(
-      req.user['organizationId'],
+      req.user!.organizationId,
       sessionId,
-      req.user['id'],
+      req.user!.id,
       dto,
     );
   }

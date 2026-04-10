@@ -30,9 +30,9 @@ export class ApiConfigController {
     @Body() dto: CreateApiConfigDto,
   ) {
     return this.apiConfigService.create(
-      req.user['organizationId'],
+      req.user!.organizationId,
       contextId,
-      req.user['id'],
+      req.user!.id,
       dto,
     );
   }
@@ -42,12 +42,12 @@ export class ApiConfigController {
     @Req() req: Request,
     @Param('contextId') contextId: string,
   ) {
-    return this.apiConfigService.findAll(req.user['organizationId'], contextId);
+    return this.apiConfigService.findAll(req.user!.organizationId, contextId);
   }
 
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    return this.apiConfigService.findOne(req.user['organizationId'], id);
+    return this.apiConfigService.findOne(req.user!.organizationId, id);
   }
 
   @Put(':id')
@@ -57,12 +57,12 @@ export class ApiConfigController {
     @Param('id') id: string,
     @Body() dto: UpdateApiConfigDto,
   ) {
-    return this.apiConfigService.update(req.user['organizationId'], id, dto);
+    return this.apiConfigService.update(req.user!.organizationId, id, dto);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async remove(@Req() req: Request, @Param('id') id: string) {
-    return this.apiConfigService.remove(req.user['organizationId'], id);
+    return this.apiConfigService.remove(req.user!.organizationId, id);
   }
 }

@@ -30,7 +30,7 @@ export class RagController {
     return this.ragService.query(
       body.query,
       body.contextId,
-      req.user['organizationId'],
+      req.user!.organizationId,
       body.topK,
     );
   }
@@ -41,7 +41,7 @@ export class RagController {
     const generator = this.ragService.queryStream(
       query as string,
       contextId as string,
-      req.user['organizationId'],
+      req.user!.organizationId,
       Number(topK) || 5,
     );
 
@@ -62,12 +62,12 @@ export class RagController {
   @Get('stats/:contextId')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getStats(@Req() req: Request, @Param('contextId') contextId: string) {
-    return this.ragService.getStats(req.user['organizationId'], contextId);
+    return this.ragService.getStats(req.user!.organizationId, contextId);
   }
 
   @Post('reindex/:contextId')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async reindex(@Req() req: Request, @Param('contextId') contextId: string) {
-    return this.ragService.reindex(req.user['organizationId'], contextId);
+    return this.ragService.reindex(req.user!.organizationId, contextId);
   }
 }

@@ -1,12 +1,10 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import * as cuid from 'cuid';
 
 @Injectable()
 export class DocumentService {
@@ -42,7 +40,7 @@ export class DocumentService {
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
     const formData = new FormData();
-    formData.append('file', new Blob([file.buffer]), file.originalname);
+    formData.append('file', new Blob([new Uint8Array(file.buffer)]), file.originalname);
     formData.append('document_id', doc.id);
     formData.append('document_name', doc.name);
     formData.append('context_id', contextId);
