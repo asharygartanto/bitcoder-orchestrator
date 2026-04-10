@@ -4,9 +4,9 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     AI_API_KEY: str = ""
-    AI_API_BASE_URL: str = "https://api.bitcoder.ai/v1"
-    AI_CHAT_MODEL: str = "bitcoder-chat"
-    AI_EMBEDDING_MODEL: str = "bitcoder-embedding"
+    AI_API_BASE_URL: str = "https://agent.baleinovasiteknologi.com/v1"
+    AI_CHAT_MODEL: str = "bitcoder-jago"
+    AI_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     AI_MAX_TOKENS: int = 4096
     AI_TEMPERATURE: float = 0.7
 
