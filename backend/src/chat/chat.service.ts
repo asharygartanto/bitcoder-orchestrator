@@ -19,7 +19,6 @@ export class ChatService {
         title: dto.title || 'New Chat',
         userId,
         organizationId,
-        contextId: dto.contextId,
       },
     });
   }
@@ -27,7 +26,6 @@ export class ChatService {
   async findSessions(organizationId: string, userId: string) {
     return this.prisma.chatSession.findMany({
       where: { userId, organizationId },
-      include: { context: { select: { id: true, name: true } } },
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -37,7 +35,6 @@ export class ChatService {
       where: { id: sessionId, userId, organizationId },
       include: {
         messages: { orderBy: { createdAt: 'asc' } },
-        context: { select: { id: true, name: true } },
       },
     });
     if (!session) throw new NotFoundException('Session not found');
@@ -64,11 +61,6 @@ export class ChatService {
     });
     if (!session) throw new NotFoundException('Session not found');
 
-    const contextId = dto.contextId || session.contextId;
-    if (!contextId) {
-      throw new NotFoundException('No context selected for this chat');
-    }
-
     await this.prisma.chatMessage.create({
       data: {
         sessionId,
@@ -77,27 +69,65 @@ export class ChatService {
       },
     });
 
-    const apiConfigs = await this.apiConfigService.getActiveConfigs(contextId);
+    const contexts = await this.prisma.context.findMany({
+      where: { organizationId, isActive: true },
+      include: { apiConfigs: { where: { isActive: true } } },
+    });
+
+    if (contexts.length === 0) {
+      throw new NotFoundException('No active contexts found. Please create a context in Admin Panel first.');
+    }
+
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
 
-    const { data } = await firstValueFrom(
-      this.httpService.post(`${ragUrl}/api/query`, {
-        query: dto.content,
-        context_id: contextId,
-        organization_id: organizationId,
-        top_k: 5,
-        api_configs: apiConfigs,
-      }),
-    );
+    let bestAnswer = '';
+    let bestSources: any[] = [];
+    let bestApiResults: any[] = [];
+    let bestScore = -1;
+
+    for (const ctx of contexts) {
+      const apiConfigs = ctx.apiConfigs.map((ac) => ({
+        name: ac.name,
+        endpoint: ac.endpoint,
+        method: ac.method,
+        headers: ac.headers as Record<string, string>,
+        bodyTemplate: ac.bodyTemplate as Record<string, any>,
+        isActive: ac.isActive,
+      }));
+
+      try {
+        const { data } = await firstValueFrom(
+          this.httpService.post(`${ragUrl}/api/query`, {
+            query: dto.content,
+            context_id: ctx.id,
+            organization_id: organizationId,
+            top_k: 3,
+            api_configs: apiConfigs,
+          }),
+        );
+
+        const topScore = data.sources?.[0]?.score || 0;
+        if (topScore > bestScore) {
+          bestScore = topScore;
+          bestAnswer = data.answer;
+          bestSources = data.sources || [];
+          bestApiResults = data.api_results || [];
+        }
+      } catch {}
+    }
+
+    if (!bestAnswer) {
+      bestAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
+    }
 
     const assistantMessage = await this.prisma.chatMessage.create({
       data: {
         sessionId,
         role: 'ASSISTANT',
-        content: data.answer,
+        content: bestAnswer,
         references: {
-          sources: data.sources,
-          api_results: data.api_results,
+          sources: bestSources,
+          api_results: bestApiResults,
         },
       },
     });
@@ -106,14 +136,14 @@ export class ChatService {
       const title = dto.content.substring(0, 50) + (dto.content.length > 50 ? '...' : '');
       await this.prisma.chatSession.update({
         where: { id: sessionId },
-        data: { title, contextId },
+        data: { title },
       });
     }
 
     return {
       message: assistantMessage,
-      sources: data.sources,
-      api_results: data.api_results,
+      sources: bestSources,
+      api_results: bestApiResults,
     };
   }
 }

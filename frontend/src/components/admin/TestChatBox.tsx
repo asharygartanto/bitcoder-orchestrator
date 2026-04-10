@@ -97,22 +97,26 @@ export default function TestChatBox({ contextId }: Props) {
                       : 'bg-bc-bg-dark text-bc-text-dark rounded-bl-md border border-bc-border'
                   }`}
                 >
-                  <div className="prose prose-invert prose-sm max-w-none text-sm">
+                  <div className="prose prose-sm max-w-none text-sm text-bc-text-dark">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
 
-                  {msg.references?.sources && msg.references.sources.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-bc-border space-y-1.5">
-                      <p className="text-xs font-medium text-bc-text-muted">Sources</p>
-                      {msg.references.sources.map((s, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-lg bg-bc-bg-muted px-2 py-1.5 text-xs">
-                          <FileText size={10} className="text-bc-primary shrink-0" />
-                          <span className="truncate text-bc-text-secondary">{s.document_name}</span>
-                          <span className="ml-auto text-bc-text-muted">{Math.round(s.score * 100)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {msg.references?.sources && msg.references.sources.length > 0 && (() => {
+                    const best = msg.references.sources.reduce((a, b) => a.score > b.score ? a : b);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-bc-border">
+                        <a
+                          href={`/api/documents/download/${best.document_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
+                        >
+                          <FileText size={14} className="shrink-0" />
+                          <span className="truncate">{best.document_name}</span>
+                        </a>
+                      </div>
+                    );
+                  })()}
 
                   {msg.references?.api_results && msg.references.api_results.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-bc-border space-y-1">

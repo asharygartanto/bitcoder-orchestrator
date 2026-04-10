@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useChatStore } from '../stores/chat.store';
 import {
   getSessions,
@@ -7,11 +7,9 @@ import {
   sendMessage,
   getSession,
 } from '../services/chat';
-import { getContexts } from '../services/context';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatWindow from '../components/chat/ChatWindow';
 import ChatInput from '../components/chat/ChatInput';
-import ContextSelector from '../components/chat/ContextSelector';
 import type { ChatMessage, SourceReference } from '../types';
 import { MessageSquarePlus } from 'lucide-react';
 
@@ -20,15 +18,11 @@ export default function ChatPage() {
     sessions,
     activeSession,
     messages,
-    contexts,
-    selectedContext,
     isLoading,
     isSending,
     setSessions,
     setActiveSession,
     addMessage,
-    setContexts,
-    setSelectedContext,
     setLoading,
     setSending,
     removeSession,
@@ -39,7 +33,6 @@ export default function ChatPage() {
 
   useEffect(() => {
     loadSessions();
-    loadContexts();
   }, []);
 
   const loadSessions = async () => {
@@ -49,16 +42,9 @@ export default function ChatPage() {
     } catch {}
   };
 
-  const loadContexts = async () => {
-    try {
-      const data = await getContexts();
-      setContexts(data);
-    } catch {}
-  };
-
   const handleNewChat = async () => {
     try {
-      const session = await createSession('New Chat', selectedContext?.id);
+      const session = await createSession('New Chat');
       setSessions([session, ...sessions]);
       setActiveSession(session);
     } catch {}
@@ -85,7 +71,7 @@ export default function ChatPage() {
   const handleSend = async (content: string) => {
     if (!activeSession) {
       try {
-        const session = await createSession(content.substring(0, 50), selectedContext?.id);
+        const session = await createSession(content.substring(0, 50));
         setSessions([session, ...sessions]);
         setActiveSession({ ...session, messages: [] });
         await doSend(session.id, content);
@@ -108,7 +94,7 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      const result = await sendMessage(sessionId, content, selectedContext?.id);
+      const result = await sendMessage(sessionId, content);
       addMessage(result.message);
     } catch {
       const errMsg: ChatMessage = {
@@ -136,14 +122,6 @@ export default function ChatPage() {
             <MessageSquarePlus size={18} />
             New Chat
           </button>
-        </div>
-
-        <div className="px-3 pb-2">
-          <ContextSelector
-            contexts={contexts}
-            selected={selectedContext}
-            onSelect={setSelectedContext}
-          />
         </div>
 
         <ChatSidebar
