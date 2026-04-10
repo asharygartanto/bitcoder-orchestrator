@@ -1,6 +1,6 @@
-# Production VPS Deployment Guide (Docker)
+# Production VPS Deployment Guide (Hybrid: Docker + Host PostgreSQL)
 
-This guide provides step-by-step instructions for deploying the Bitcoder AI Orchestrator to a production VPS (Ubuntu/Debian) using Docker and a dedicated service user.
+This guide provides step-by-step instructions for deploying the Bitcoder AI Orchestrator to a production VPS (Ubuntu/Debian) where the application runs in Docker, but PostgreSQL is installed directly on the host.
 
 ## 1. VPS Preparation
 
@@ -14,12 +14,11 @@ sudo usermod -aG docker orchestrator
 ```
 
 ### B. Configure SSH for 'orchestrator'
-Switch to the new user and set up SSH access:
+Switch to the new user and set up SSH access (Replace `[YOUR_PUBLIC_KEY]` with your local key):
 
 ```bash
 su - orchestrator
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "[YOUR_PUBLIC_KEY]" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
@@ -36,13 +35,41 @@ sudo ufw enable
 
 ## 2. Infrastructure Installation
 
-Install Docker and Docker Compose:
-
+### A. Install Docker and Docker Compose
 ```bash
 sudo apt update && sudo apt upgrade -y
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
+
+### B. Install Host PostgreSQL
+```bash
+sudo apt install postgresql postgresql-contrib -y
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+### C. Configure PostgreSQL Networking (CRUCIAL)
+Allow Docker containers to connect to the host PostgreSQL.
+
+1.  **Modify `postgresql.conf`**:
+    ```bash
+    # Replace (XX) with your postgres version (e.g., 14, 15, 16)
+    sudo nano /etc/postgresql/$(psql -V | egrep -o '[0-9]{2}')/main/postgresql.conf
+    ```
+    Set `listen_addresses = 'localhost,172.17.0.1'` (172.17.0.1 is the default Docker gateway).
+
+2.  **Modify `pg_hba.conf`**:
+    ```bash
+    sudo nano /etc/postgresql/$(psql -V | egrep -o '[0-9]{2}')/main/pg_hba.conf
+    ```
+    Add this line at the bottom:
+    `host all all 172.17.0.0/16 md5`
+
+3.  **Restart PostgreSQL**:
+    ```bash
+    sudo systemctl restart postgresql
+    ```
 
 ---
 
@@ -56,88 +83,47 @@ git clone https://github.com/asharygartanto/bitcoder-orchestrator.git
 cd bitcoder-orchestrator
 ```
 
-### B. Configure Environment & Database
-The `.env` file defines the database credentials that Docker will use to create the DB and User.
-
-1.  **Copy Environment**: `cp .env.example .env && nano .env`
-2.  **Set Database Credentials**:
-    *   `POSTGRES_DB`: (e.g., `orchestrator`)
-    *   `POSTGRES_USER`: (e.g., `bitcoder`)
-    *   `POSTGRES_PASSWORD`: (Your secure password)
-    *   `DATABASE_URL`: `postgresql://[USER]:[PASS]@postgres:5432/[DB]?schema=public`
+### B. Database & Environment Configuration
+1.  **Initialize Database**:
+    Use the provided script to create the DB and user on the host:
+    ```bash
+    chmod +x setup-db.sh
+    ./setup-db.sh
+    ```
+2.  **Configure `.env`**:
+    ```bash
+    cp .env.example .env && nano .env
+    ```
+    Set `DATABASE_URL=postgresql://bitcoder:[PASSWORD]@172.17.0.1:5432/orchestrator?schema=public`
 
 ### C. Deploy using the Script
+The `deploy.sh` script automates the build and deployment process.
 ```bash
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-### D. Verify & Grant Permissions
-After the containers are up, ensure the database user has full schema permissions (Crucial for Prisma):
+---
 
-1.  **Grant Permissions**:
+## 4. Reverse Proxy & SSL (Nginx)
+
+1.  **Install Nginx & Certbot**:
     ```bash
-    docker compose exec postgres psql -U root -c "GRANT ALL ON SCHEMA public TO bitcoder;"
+    sudo apt install nginx certbot python3-certbot-nginx -y
     ```
-2.  **Verify Connectivity**:
+2.  **Configure Nginx**:
+    `sudo nano /etc/nginx/sites-available/orchestrator` (Map ports `8080` for frontend and `3002` for backend).
+3.  **Enable & Get SSL**:
     ```bash
-    docker compose exec backend sh -c "nc -zv postgres 5432"
+    sudo ln -s /etc/nginx/sites-available/orchestrator /etc/nginx/sites-enabled/
+    sudo nginx -t && sudo systemctl restart nginx
+    sudo certbot --nginx -d orchestrator.gartanto.site
     ```
 
-### E. Manual Database Management
-*   **Run Migrations**: `docker compose exec backend npx prisma migrate deploy`
-*   **Run Seeding**: `docker compose exec backend npx ts-node prisma/seed.ts`
-*   **Access DB CLI**: `docker compose exec postgres psql -U bitcoder -d orchestrator`
-
 ---
 
-## 4. Cloudflare DNS Setup
-
-1.  **Add A Record**: Point your subdomain (e.g., `orchestrator`) to your VPS IP.
-2.  **Proxy Status**: Enabled (Orange cloud).
-3.  **SSL/TLS Mode**: Set to **Full (Strict)**.
-
----
-
-## 5. Reverse Proxy & SSL (Nginx)
-
-### A. Install Nginx & Certbot
-```bash
-sudo apt install nginx certbot python3-certbot-nginx -y
-```
-
-### B. Configure Nginx
-`sudo nano /etc/nginx/sites-available/orchestrator`
-
-```nginx
-server {
-    listen 80;
-    server_name orchestrator.gartanto.site;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:3002/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-Enable & SSL:
-```bash
-sudo ln -s /etc/nginx/sites-available/orchestrator /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl restart nginx
-sudo certbot --nginx -d orchestrator.gartanto.site
-```
-
----
-
-## 6. Maintenance Commands
+## 5. Maintenance Commands
 
 *   **Logs**: `docker compose logs -f`
 *   **Prisma Studio**: `docker compose exec backend npx prisma studio --browser none`
+*   **Access Host DB**: `psql -h localhost -U bitcoder -d orchestrator`

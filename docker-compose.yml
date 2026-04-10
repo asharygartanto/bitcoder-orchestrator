@@ -1,24 +1,6 @@
 version: "3.9"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: bitcoder-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bitcoder-network
-
   chromadb:
     image: chromadb/chroma:latest
     container_name: bitcoder-chromadb
@@ -42,8 +24,6 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
       chromadb:
         condition: service_started
       rag-engine:
@@ -97,7 +77,6 @@ services:
       - bitcoder-network
 
 volumes:
-  postgres_data:
   chroma_data:
   upload_data:
 
