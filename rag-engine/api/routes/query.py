@@ -1,0 +1,50 @@
+import json
+from typing import Optional
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest
+from services.rag_pipeline import RAGPipeline
+
+router = APIRouter()
+rag_pipeline = RAGPipeline()
+
+
+@router.post("", response_model=QueryResponse)
+async def query_rag(request: QueryRequest):
+    try:
+        result = await rag_pipeline.query(
+            query=request.query,
+            context_id=request.context_id,
+            organization_id=request.organization_id,
+            top_k=request.top_k,
+            api_configs=request.api_configs,
+        )
+        return QueryResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def query_rag_stream(request: StreamQueryRequest):
+    async def event_generator():
+        try:
+            async for chunk in rag_pipeline.query_stream(
+                query=request.query,
+                context_id=request.context_id,
+                organization_id=request.organization_id,
+                top_k=request.top_k,
+                api_configs=request.api_configs,
+            ):
+                yield chunk
+        except Exception as e:
+            yield f"data: {{'type': 'error', 'message': '{str(e)}'}}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

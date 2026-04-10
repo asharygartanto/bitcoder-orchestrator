@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  contexts  Context[]
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  avatar         String?
+  passwordHash   String?
+  googleId       String?  @unique
+  role           UserRole @default(USER)
+  isActive       Boolean  @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  chatSessions ChatSession[]
+  documents    Document[]
+  apiConfigs   ApiConfig[]
+
+  @@index([organizationId])
+  @@index([role])
+}
+
+model Context {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  isActive       Boolean  @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  documents  Document[]
+  apiConfigs ApiConfig[]
+  chatSessions ChatSession[]
+
+  @@unique([name, organizationId])
+  @@index([organizationId])
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  VECTORIZING
+  INDEXING
+  READY
+  ERROR
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  name           String
+  originalName   String
+  fileType       String
+  fileSize       Int
+  status         DocumentStatus @default(UPLOADED)
+  vectorCount    Int            @default(0)
+  contextId      String
+  context        Context        @relation(fields: [contextId], references: [id], onDelete: Cascade)
+  organizationId String
+  uploadedById   String
+  uploadedBy     User           @relation(fields: [uploadedById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([contextId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+}
+
+model ApiConfig {
+  id             String     @id @default(cuid())
+  name           String
+  description    String?
+  endpoint       String
+  method         HttpMethod @default(GET)
+  headers        Json?
+  bodyTemplate   Json?
+  isActive       Boolean    @default(true)
+  contextId      String
+  context        Context    @relation(fields: [contextId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdById    String
+  createdBy      User       @relation(fields: [createdById], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([contextId])
+  @@index([organizationId])
+}
+
+model ChatSession {
+  id             String   @id @default(cuid())
+  title          String   @default("New Chat")
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  contextId      String?
+  context        Context? @relation(fields: [contextId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String
+  references Json?
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId])
+}

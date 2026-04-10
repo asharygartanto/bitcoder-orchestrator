@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bitcoder-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bitcoder}
+      POSTGRES_USER: ${POSTGRES_USER:-bitcoder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bitcoder_dev_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bitcoder}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bitcoder-chromadb
+    ports:
+      - "${CHROMA_PORT:-8001}:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+      - ALLOW_RESET=TRUE
+
+  test-api:
+    build:
+      context: ./rag-engine/test_api
+      dockerfile: Dockerfile
+    container_name: bitcoder-test-api
+    ports:
+      - "8090:8090"
+
+volumes:
+  postgres_data:
+  chroma_data:

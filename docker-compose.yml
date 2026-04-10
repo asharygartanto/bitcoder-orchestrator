@@ -1,0 +1,106 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bitcoder-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bitcoder-network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bitcoder-chromadb
+    restart: unless-stopped
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+      - ALLOW_RESET=TRUE
+    networks:
+      - bitcoder-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bitcoder-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3002"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+      rag-engine:
+        condition: service_started
+    volumes:
+      - upload_data:/app/uploads
+    networks:
+      - bitcoder-network
+
+  rag-engine:
+    build:
+      context: ./rag-engine
+      dockerfile: Dockerfile
+    container_name: bitcoder-rag-engine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      chromadb:
+        condition: service_started
+    volumes:
+      - upload_data:/app/uploads
+    networks:
+      - bitcoder-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bitcoder-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
+      - rag-engine
+    networks:
+      - bitcoder-network
+
+  test-api:
+    build:
+      context: ./rag-engine/test_api
+      dockerfile: Dockerfile
+    container_name: bitcoder-test-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8090"
+    networks:
+      - bitcoder-network
+
+volumes:
+  postgres_data:
+  chroma_data:
+  upload_data:
+
+networks:
+  bitcoder-network:
+    driver: bridge
