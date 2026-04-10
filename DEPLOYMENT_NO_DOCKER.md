@@ -27,11 +27,15 @@ Ensure the following are installed on your system:
    *   **Ubuntu/Debian**:
        ```bash
        sudo apt install postgresql postgresql-contrib -y
+       sudo systemctl start postgresql
+       sudo systemctl enable postgresql
+       
        # Create database and user
-       sudo -u postgres psql -c "CREATE DATABASE bitcoder;"
+       sudo -u postgres psql -c "CREATE DATABASE orchestrator;"
        sudo -u postgres psql -c "CREATE USER bitcoder WITH PASSWORD 'bitcoder_password';"
-       sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE bitcoder TO bitcoder;"
+       sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE orchestrator TO bitcoder;"
        ```
+    *   **Verify Service**: `sudo systemctl status postgresql`
 
 4. **PM2**: Process manager (for production).
    ```bash
@@ -65,9 +69,33 @@ Ensure the following are installed on your system:
         *   `AI_API_KEY`: Your Bitcoder AI API Key.
         *   `NODE_ENV`: Set to `development` for local testing or `production` for server deployment.
 
-3.  **Database Setup**:
-    *   Create a new database in PostgreSQL matching the name in your `DATABASE_URL`.
-    *   Ensure the user has appropriate permissions.
+3.  **Database Creation & User Setup**:
+    Before running the backend, you must create the database and user. You can do this automatically using the helper script:
+
+    *   **Option A: Automated Script (Recommended)**:
+        ```bash
+        # Make the script executable
+        chmod +x setup-db.sh
+        
+        # Run the script (will ask for sudo for postgres access)
+        ./setup-db.sh
+        ```
+
+    *   **Option B: Manual SQL Commands**:
+        If you prefer manual setup, log in to `psql` as root:
+        ```bash
+        sudo -u postgres psql
+        ```
+        And run these commands:
+        CREATE DATABASE orchestrator;
+        CREATE USER bitcoder WITH PASSWORD 'your_secure_password';
+        GRANT ALL PRIVILEGES ON DATABASE orchestrator TO bitcoder;
+        \c orchestrator
+        GRANT ALL ON SCHEMA public TO bitcoder; -- Required for Prisma
+        \q
+        ```
+
+    *   **Update your `.env`**: Ensure `DATABASE_URL` matches your credentials.
 
 ---
 
@@ -212,9 +240,27 @@ client = chromadb.HttpClient(host='localhost', port=8001)
 print(f"Connected to ChromaDB! Heartbeat: {client.heartbeat()}")
 ```
 
+## 7. Database Management
+
+If you need to manage the database manually:
+
+### A. Accessing PostgreSQL CLI
+```bash
+# Log in as the 'bitcoder' user to the 'orchestrator' database
+psql -h localhost -U bitcoder -d orchestrator
+```
+
+### B. Common Prisma Commands
+These commands should be run inside the `backend` directory:
+
+*   **View Database Data**: `npx prisma studio` (Opens a web UI at `http://localhost:5555`)
+*   **Reset Database**: `npx prisma migrate reset` (WARNING: This deletes all data)
+*   **Push Schema Changes**: `npx prisma db push` (Use for quick prototyping without migrations)
+*   **Verify Schema**: `npx prisma validate`
+
 ---
 
-## 6. Troubleshooting
+## 8. Troubleshooting
 
 *   **Database Connection Error**: Verify `DATABASE_URL` in `.env` and ensure PostgreSQL is running.
 *   **Prisma Errors**: Run `npx prisma generate` after any changes to `prisma/schema.prisma`.
