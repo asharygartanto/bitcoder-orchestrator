@@ -105,24 +105,88 @@ chmod +x deploy.sh
 
 ---
 
-## 4. Reverse Proxy & SSL (Nginx)
+## 4. Cloudflare DNS & SSL Configuration
 
-1.  **Install Nginx & Certbot**:
-    ```bash
-    sudo apt install nginx certbot python3-certbot-nginx -y
-    ```
-2.  **Configure Nginx**:
-    `sudo nano /etc/nginx/sites-available/orchestrator` (Map ports `8080` for frontend and `3002` for backend).
-3.  **Enable & Get SSL**:
-    ```bash
-    sudo ln -s /etc/nginx/sites-available/orchestrator /etc/nginx/sites-enabled/
-    sudo nginx -t && sudo systemctl restart nginx
-    sudo certbot --nginx -d orchestrator.gartanto.site
-    ```
+### A. Configure Cloudflare DNS
+1.  Log in to your **Cloudflare Dashboard**.
+2.  Select your domain.
+3.  Go to **DNS** -> **Records**.
+4.  Add a new **A Record**:
+    *   **Type**: `A`
+    *   **Name**: `orchestrator` (for `orchestrator.yourdomain.com`)
+    *   **IPv4 address**: Your VPS Public IP.
+    *   **Proxy status**: `Proxied` (Orange cloud).
+5.  Save the record.
+
+### B. Configure SSL/TLS Mode
+1.  Go to **SSL/TLS** -> **Overview**.
+2.  Select **Full (Strict)**.
+
+### C. Generate Origin Certificate (Optional but Recommended)
+Instead of Certbot, use Cloudflare's 15-year Origin Certificate:
+1.  Go to **SSL/TLS** -> **Origin Server**.
+2.  Click **Create Certificate**.
+3.  Keep default settings (ECC, 15 years, includes `*.yourdomain.com` and `yourdomain.com`).
+4.  Cloudflare will show the **Origin Certificate** and **Private Key**.
+5.  On your VPS, save these to files:
+    *   `sudo nano /etc/ssl/certs/cloudflare.pem` (Paste the Certificate)
+    *   `sudo nano /etc/ssl/private/cloudflare.key` (Paste the Private Key)
 
 ---
 
-## 5. Maintenance Commands
+## 5. Reverse Proxy Setup (Nginx)
+
+### A. Install Nginx
+```bash
+sudo apt install nginx -y
+```
+
+### B. Configure Nginx for 'orchestrator' Subdomain
+Create the configuration: `sudo nano /etc/nginx/sites-available/orchestrator`
+
+```nginx
+server {
+    listen 80;
+    server_name orchestrator.gartanto.site;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name orchestrator.gartanto.site;
+
+    # SSL Configuration (Using Cloudflare Origin Certificate)
+    ssl_certificate /etc/ssl/certs/cloudflare.pem;
+    ssl_certificate_key /etc/ssl/private/cloudflare.key;
+
+    location / {
+        proxy_pass http://localhost:8082; # Frontend
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:3002/; # Backend
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### C. Enable Configuration
+```bash
+sudo ln -s /etc/nginx/sites-available/orchestrator /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+---
+
+## 6. Maintenance Commands
 
 *   **Logs**: `docker compose logs -f`
 *   **Prisma Studio**: `docker compose exec backend npx prisma studio --browser none`
