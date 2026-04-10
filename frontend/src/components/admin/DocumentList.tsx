@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Loader2,
   Layers,
+  Database,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Document, ProcessingStatus } from '../../types';
@@ -21,7 +22,13 @@ interface Props {
   onReplace: (id: string, file: File) => void;
 }
 
-const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+interface StatusConfig {
+  icon: React.ReactNode;
+  color: string;
+  label: string;
+}
+
+const STATUS_CONFIG: Record<string, StatusConfig> = {
   UPLOADED: { icon: <Upload size={14} />, color: 'text-blue-400', label: 'Uploaded' },
   PROCESSING: { icon: <Loader2 size={14} className="animate-spin" />, color: 'text-yellow-400', label: 'Processing' },
   VECTORIZING: { icon: <Layers size={14} className="animate-pulse" />, color: 'text-purple-400', label: 'Vectorizing' },
@@ -29,6 +36,8 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   READY: { icon: <CheckCircle2 size={14} />, color: 'text-emerald-400', label: 'Ready' },
   ERROR: { icon: <AlertCircle size={14} />, color: 'text-red-400', label: 'Error' },
 };
+
+const DEFAULT_CFG: StatusConfig = STATUS_CONFIG.ERROR;
 
 export default function DocumentList({
   documents,
@@ -109,7 +118,7 @@ export default function DocumentList({
           {documents.map((doc) => {
             const status = statuses[doc.id];
             const statusKey = status?.status?.toUpperCase() || doc.status;
-            const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.ERROR;
+            const cfg: StatusConfig = STATUS_CONFIG[statusKey] ?? DEFAULT_CFG;
 
             return (
               <div
@@ -177,26 +186,5 @@ export default function DocumentList({
         </div>
       )}
     </div>
-  );
-}
-
-function Database(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={24}
-      height={24}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M3 5V19A9 3 0 0 0 21 19V5" />
-      <path d="M3 12A9 3 0 0 0 21 12" />
-    </svg>
   );
 }

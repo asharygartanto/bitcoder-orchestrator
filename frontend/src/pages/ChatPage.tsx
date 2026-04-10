@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useChatStore } from '../stores/chat.store';
-import { useAuthStore } from '../stores/auth.store';
 import {
   getSessions,
   createSession,
   deleteSession,
   sendMessage,
+  getSession,
 } from '../services/chat';
 import { getContexts } from '../services/context';
 import ChatSidebar from '../components/chat/ChatSidebar';
@@ -16,7 +16,6 @@ import type { ChatMessage, SourceReference } from '../types';
 import { MessageSquarePlus } from 'lucide-react';
 
 export default function ChatPage() {
-  const { user } = useAuthStore();
   const {
     sessions,
     activeSession,
@@ -35,16 +34,12 @@ export default function ChatPage() {
     removeSession,
   } = useChatStore();
 
-  const [streamingContent, setStreamingContent] = useState('');
-  const [streamingSources, setStreamingSources] = useState<SourceReference[]>([]);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamingContent = '';
+  const streamingSources: SourceReference[] = [];
 
   useEffect(() => {
     loadSessions();
     loadContexts();
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
   }, []);
 
   const loadSessions = async () => {
@@ -66,18 +61,14 @@ export default function ChatPage() {
       const session = await createSession('New Chat', selectedContext?.id);
       setSessions([session, ...sessions]);
       setActiveSession(session);
-      setStreamingContent('');
-      setStreamingSources([]);
     } catch {}
   };
 
   const handleSelectSession = async (sessionId: string) => {
     try {
       setLoading(true);
-      const session = await import('../services/chat').then((m) => m.getSession(sessionId));
+      const session = await getSession(sessionId);
       setActiveSession(session);
-      setStreamingContent('');
-      setStreamingSources([]);
     } catch {
     } finally {
       setLoading(false);
@@ -115,13 +106,10 @@ export default function ChatPage() {
     };
     addMessage(userMsg);
     setSending(true);
-    setStreamingContent('');
-    setStreamingSources([]);
 
     try {
       const result = await sendMessage(sessionId, content, selectedContext?.id);
       addMessage(result.message);
-      setStreamingSources(result.sources || []);
     } catch {
       const errMsg: ChatMessage = {
         id: `err-${Date.now()}`,
