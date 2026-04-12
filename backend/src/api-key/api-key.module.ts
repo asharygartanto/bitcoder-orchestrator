@@ -6,9 +6,10 @@ import { PublicApiController } from './public-api.controller';
 import { RagModule } from '../rag/rag.module';
 import { AuthModule } from '../auth/auth.module';
 import { ChatModule } from '../chat/chat.module';
+import { ApiConfigModule } from '../api-config/api-config.module';
 
 @Module({
-  imports: [RagModule, AuthModule, ChatModule],
+  imports: [RagModule, AuthModule, ChatModule, ApiConfigModule],
   controllers: [ApiKeyController, PublicApiController],
   providers: [ApiKeyService, ApiKeyGuard],
   exports: [ApiKeyService, ApiKeyGuard],
