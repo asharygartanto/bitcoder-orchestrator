@@ -61,7 +61,7 @@ export class NewsCrawlService {
     for (const item of dto.items) {
       try {
         const result = await this.crawlUrl(item, organizationId);
-        results.push({ url: item.url, status: 'success', ...result });
+        results.push({ ...result, url: item.url, status: 'success' });
       } catch (err: any) {
         results.push({ url: item.url, status: 'error', error: err.message });
       }

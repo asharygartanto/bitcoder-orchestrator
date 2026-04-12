@@ -62,16 +62,18 @@ export class AgentGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.data.clientId = clientRecord.id;
     client.data.organizationId = clientRecord.organizationId;
-    client.data.licenseId = validation.license.id;
+    if (validation.license) {
+      client.data.licenseId = validation.license.id;
+    }
     this.agentSockets.set(clientRecord.id, client);
 
     await this.clientService.updateStatus(clientRecord.id, 'ONLINE');
 
     const config = this.clientService.getClientConfig(clientRecord);
     client.emit('config', config);
-    client.emit('license', validation.license);
+    client.emit('license', validation.license || null);
 
-    console.log(`Agent connected: ${clientRecord.name} (${clientRecord.id}) - License: ${validation.license.companyName}`);
+    console.log(`Agent connected: ${clientRecord.name} (${clientRecord.id}) - License: ${validation.license?.companyName || 'N/A'}`);
   }
 
   async handleDisconnect(client: Socket) {

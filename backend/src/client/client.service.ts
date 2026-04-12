@@ -109,9 +109,9 @@ export class ClientService {
     return this.prisma.client.update({
       where: { id: client.id },
       data: {
-        dbConfig: dto.dbConfig !== undefined ? dto.dbConfig : client.dbConfig,
-        aiConfig: dto.aiConfig !== undefined ? dto.aiConfig : client.aiConfig,
-        storageConfig: dto.storageConfig !== undefined ? dto.storageConfig : client.storageConfig,
+        dbConfig: dto.dbConfig !== undefined ? dto.dbConfig as any : client.dbConfig as any,
+        aiConfig: dto.aiConfig !== undefined ? dto.aiConfig as any : client.aiConfig as any,
+        storageConfig: dto.storageConfig !== undefined ? dto.storageConfig as any : client.storageConfig as any,
       },
       include: {
         organization: {

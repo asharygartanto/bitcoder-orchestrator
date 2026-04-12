@@ -109,7 +109,7 @@ export class EmailService {
           timeout: 10000,
         });
       } else if (config.provider === 'smtp' && config.smtpHost) {
-        const nodemailer = await import('nodemailer');
+        const nodemailer = require('nodemailer');
         const transporter = nodemailer.createTransport({
           host: config.smtpHost,
           port: config.smtpPort,

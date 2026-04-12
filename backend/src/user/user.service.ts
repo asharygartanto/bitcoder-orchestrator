@@ -105,7 +105,7 @@ export class UserService {
     for (const userDto of dto.users) {
       try {
         const result = await this.create(organizationId, userDto, createdByRole);
-        results.push({ email: userDto.email, status: 'created', ...result });
+        results.push({ ...result, email: userDto.email, status: 'created' });
       } catch (err: any) {
         results.push({ email: userDto.email, status: 'error', error: err.message });
       }
