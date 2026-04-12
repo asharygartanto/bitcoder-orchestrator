@@ -158,3 +158,38 @@ class RAGPipeline:
                 yield f"data: {content}\n\n"
 
         yield "data: [DONE]\n\n"
+
+    def search(self, query: str, context_id: str, organization_id: str, top_k: int = 5) -> list[dict]:
+        query_embedding = self.embedding_service.embed_query(query)
+        return self.vector_store.query(
+            organization_id=organization_id,
+            context_id=context_id,
+            query_embedding=query_embedding,
+            top_k=top_k,
+        )
+
+    async def generate(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> dict:
+        context_chunks = [
+            {"document_name": s["document_name"], "content": s["content"]}
+            for s in sources
+        ]
+        system_prompt = self._build_system_prompt(context_chunks, api_results)
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query},
+            ],
+            max_tokens=settings.AI_MAX_TOKENS,
+            temperature=settings.AI_TEMPERATURE,
+        )
+
+        answer = response.choices[0].message.content or ""
+
+        return {
+            "answer": answer,
+            "sources": sources,
+            "api_results": api_results,
+            "context_used": len(sources),
+        }

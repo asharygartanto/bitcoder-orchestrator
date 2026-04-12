@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest
+from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest, SearchRequest, GenerateRequest
 from services.rag_pipeline import RAGPipeline
 
 router = APIRouter()
@@ -48,3 +48,30 @@ async def query_rag_stream(request: StreamQueryRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/search")
+async def search_documents(request: SearchRequest):
+    try:
+        sources = rag_pipeline.search(
+            query=request.query,
+            context_id=request.context_id,
+            organization_id=request.organization_id,
+            top_k=request.top_k,
+        )
+        return {"sources": sources}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate", response_model=QueryResponse)
+async def generate_answer(request: GenerateRequest):
+    try:
+        result = await rag_pipeline.generate(
+            query=request.query,
+            sources=[s.model_dump() for s in request.sources],
+            api_results=request.api_results,
+        )
+        return QueryResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

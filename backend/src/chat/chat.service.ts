@@ -80,10 +80,8 @@ export class ChatService {
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
 
-    let bestAnswer = '';
-    let bestSources: any[] = [];
-    let bestApiResults: any[] = [];
-    let bestScore = -1;
+    const allSources: any[] = [];
+    const allApiConfigs: any[] = [];
 
     for (const ctx of contexts) {
       const apiConfigs = ctx.apiConfigs.map((ac) => ({
@@ -94,40 +92,52 @@ export class ChatService {
         bodyTemplate: ac.bodyTemplate as Record<string, any>,
         isActive: ac.isActive,
       }));
+      allApiConfigs.push(...apiConfigs);
 
       try {
-        const { data } = await firstValueFrom(
-          this.httpService.post(`${ragUrl}/api/query`, {
+        const { data: searchData } = await firstValueFrom(
+          this.httpService.post(`${ragUrl}/api/query/search`, {
             query: dto.content,
             context_id: ctx.id,
             organization_id: organizationId,
             top_k: 3,
-            api_configs: apiConfigs,
           }),
         );
 
-        const topScore = data.sources?.[0]?.score || 0;
-        if (topScore > bestScore) {
-          bestScore = topScore;
-          bestAnswer = data.answer;
-          bestSources = data.sources || [];
-          bestApiResults = data.api_results || [];
+        if (searchData?.sources) {
+          allSources.push(...searchData.sources);
         }
       } catch {}
     }
 
-    if (!bestAnswer) {
-      bestAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
+    allSources.sort((a, b) => (b.score || 0) - (a.score || 0));
+    const topSources = allSources.slice(0, 5);
+
+    if (topSources.length === 0) {
+      const noAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
+      const assistantMessage = await this.prisma.chatMessage.create({
+        data: { sessionId, role: 'ASSISTANT', content: noAnswer, references: { sources: [] } },
+      });
+
+      return { message: assistantMessage, sources: [], api_results: [] };
     }
+
+    const { data: generateData } = await firstValueFrom(
+      this.httpService.post(`${ragUrl}/api/query/generate`, {
+        query: dto.content,
+        sources: topSources,
+        api_configs: allApiConfigs.length > 0 ? allApiConfigs : undefined,
+      }),
+    );
 
     const assistantMessage = await this.prisma.chatMessage.create({
       data: {
         sessionId,
         role: 'ASSISTANT',
-        content: bestAnswer,
+        content: generateData.answer,
         references: {
-          sources: bestSources,
-          api_results: bestApiResults,
+          sources: generateData.sources || topSources,
+          api_results: generateData.api_results,
         },
       },
     });
@@ -142,8 +152,8 @@ export class ChatService {
 
     return {
       message: assistantMessage,
-      sources: bestSources,
-      api_results: bestApiResults,
+      sources: generateData.sources || topSources,
+      api_results: generateData.api_results,
     };
   }
 }

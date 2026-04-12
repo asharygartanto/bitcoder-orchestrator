@@ -69,3 +69,16 @@ class DeleteRequest(BaseModel):
 class ReindexRequest(BaseModel):
     context_id: str
     organization_id: str
+
+
+class SearchRequest(BaseModel):
+    query: str
+    context_id: str
+    organization_id: str
+    top_k: int = 5
+
+
+class GenerateRequest(BaseModel):
+    query: str
+    sources: list[SourceReference]
+    api_results: Optional[list[dict]] = None
