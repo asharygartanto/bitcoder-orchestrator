@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bitcoder-client-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bitcoder}
+      POSTGRES_USER: ${POSTGRES_USER:-bitcoder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bitcoder}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bitcoder}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bitcoder-net
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bitcoder-client-chromadb
+    restart: unless-stopped
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+      - ALLOW_RESET=TRUE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bitcoder-net
+
+  rag-engine:
+    build:
+      context: https://github.com/user/bitcoder-orchestrator.git#main:rag-engine
+      dockerfile: Dockerfile
+    container_name: bitcoder-client-rag-engine
+    restart: unless-stopped
+    env_file:
+      - .env.agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    volumes:
+      - upload_data:/app/uploads
+    networks:
+      - bitcoder-net
+
+  agent:
+    image: bitcoder/agent:latest
+    container_name: bitcoder-client-agent
+    restart: unless-stopped
+    environment:
+      - CLOUD_URL=${CLOUD_URL}
+      - AGENT_KEY=${AGENT_KEY}
+      - RAG_ENGINE_URL=http://rag-engine:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      rag-engine:
+        condition: service_started
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - upload_data:/app/uploads
+    networks:
+      - bitcoder-net
+
+volumes:
+  postgres_data:
+  chroma_data:
+  upload_data:
+
+networks:
+  bitcoder-net:
+    driver: bridge

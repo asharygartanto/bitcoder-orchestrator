@@ -3,8 +3,16 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ChatPage from './pages/ChatPage';
 import AdminPage from './pages/AdminPage';
+import ClientsPage from './pages/ClientsPage';
+import UsersPage from './pages/UsersPage';
+import ApiKeysPage from './pages/ApiKeysPage';
+import MonitoringPage from './pages/MonitoringPage';
+import NewsCrawlPage from './pages/NewsCrawlPage';
+import LicensesPage from './pages/LicensesPage';
 import AppLayout from './components/layout/AppLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -20,6 +28,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (!user) return <Navigate to="/login" />;
+  if (user.role !== 'SUPER_ADMIN') return <Navigate to="/" />;
+  return <>{children}</>;
+}
+
 export default function App() {
   const { hydrate } = useAuthStore();
 
@@ -32,6 +47,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/"
@@ -51,6 +68,66 @@ export default function App() {
                 <AdminPage />
               </AppLayout>
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/clients"
+          element={
+            <AdminRoute>
+              <AppLayout>
+                <ClientsPage />
+              </AppLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <AdminRoute>
+              <AppLayout>
+                <UsersPage />
+              </AppLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/api-keys"
+          element={
+            <AdminRoute>
+              <AppLayout>
+                <ApiKeysPage />
+              </AppLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/monitoring"
+          element={
+            <SuperAdminRoute>
+              <AppLayout>
+                <MonitoringPage />
+              </AppLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/news-crawl"
+          element={
+            <SuperAdminRoute>
+              <AppLayout>
+                <NewsCrawlPage />
+              </AppLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/licenses"
+          element={
+            <SuperAdminRoute>
+              <AppLayout>
+                <LicensesPage />
+              </AppLayout>
+            </SuperAdminRoute>
           }
         />
       </Routes>

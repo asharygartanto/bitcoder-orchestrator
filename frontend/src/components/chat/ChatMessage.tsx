@@ -40,7 +40,11 @@ export default function ChatMessage({ message, isStreaming }: Props) {
             </div>
 
             {isStreaming && (
-              <span className="inline-block h-4 w-1 animate-pulse-subtle bg-bc-primary rounded-full" />
+              <span className="inline-flex items-center gap-0.5 mt-1">
+                <span className="inline-block h-4 w-0.5 bg-bc-primary rounded-full animate-dot-wave" style={{ animationDelay: '0ms' }} />
+                <span className="inline-block h-4 w-0.5 bg-bc-primary/70 rounded-full animate-dot-wave" style={{ animationDelay: '120ms' }} />
+                <span className="inline-block h-4 w-0.5 bg-bc-primary/40 rounded-full animate-dot-wave" style={{ animationDelay: '240ms' }} />
+              </span>
             )}
 
             {bestSource && (

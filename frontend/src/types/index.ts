@@ -111,3 +111,51 @@ export interface ProcessingStatus {
   chunks_count: number;
   message: string;
 }
+
+export type ClientStatus = 'OFFLINE' | 'ONLINE' | 'SETTING_UP' | 'ERROR';
+
+export interface Client {
+  id: string;
+  name: string;
+  agentKey: string;
+  status: ClientStatus;
+  lastSeenAt: string | null;
+  organizationId: string;
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  dbConfig: Record<string, any> | null;
+  aiConfig: Record<string, any> | null;
+  storageConfig: Record<string, any> | null;
+  healthStatus: ClientHealthStatus | null;
+  branding: ClientBranding | null;
+  createdAt: string;
+  updatedAt: string;
+  installCommand?: string;
+}
+
+export interface ClientHealthStatus {
+  postgres: { status: string; latencyMs: number } | null;
+  chromadb: { status: string; latencyMs: number } | null;
+  ragEngine: { status: string; latencyMs: number; version?: string } | null;
+  disk: { usedPercent: number; totalGb: string; freeGb: string };
+  memory: { usedPercent: number; totalMb: string; freeMb: string };
+  uptime: number;
+}
+
+export interface OrgUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ClientBranding {
+  title: string;
+  primaryColor: string;
+  logoUrl: string | null;
+}

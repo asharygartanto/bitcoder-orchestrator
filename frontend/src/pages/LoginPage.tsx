@@ -23,7 +23,7 @@ export default function LoginPage() {
       setAuth(res.user, res.access_token);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message?.[0] || 'Login failed');
+      setError(err.response?.data?.message?.[0] || 'Login gagal. Periksa email dan password.');
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <BitcoderLogo className="mx-auto mb-4 h-16 w-16" />
           <h1 className="text-2xl font-bold text-bc-text-dark">Bitcoder Orchestrator</h1>
-          <p className="mt-2 text-sm text-bc-text-secondary">Sign in to continue</p>
+          <p className="mt-2 text-sm text-bc-text-secondary">Masuk untuk melanjutkan</p>
         </div>
 
         <div className="rounded-xl border border-bc-border bg-white p-8 shadow-sm">
@@ -64,7 +64,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-bc-text-dark">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-medium text-bc-text-dark">Password</label>
+                <Link to="/forgot-password" className="text-xs text-bc-primary hover:underline">
+                  Lupa password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-bc-text-muted" size={18} />
                 <input
@@ -72,7 +77,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border border-bc-border bg-bc-bg-subtle py-2.5 pl-10 pr-10 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none transition-all focus:border-bc-primary focus:ring-1 focus:ring-bc-primary/20"
-                  placeholder="Enter password"
+                  placeholder="Masukkan password"
                   required
                 />
                 <button
@@ -90,13 +95,13 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full rounded-lg bg-bc-primary py-2.5 text-sm font-semibold text-white transition-all hover:bg-bc-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Memproses...' : 'Masuk'}
             </button>
           </form>
 
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-bc-border" />
-            <span className="text-xs text-bc-text-muted">or</span>
+            <span className="text-xs text-bc-text-muted">atau</span>
             <div className="h-px flex-1 bg-bc-border" />
           </div>
 
@@ -110,16 +115,20 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            Sign in with Google
+            Masuk dengan Google
           </a>
 
           <p className="mt-6 text-center text-sm text-bc-text-muted">
-            Don't have an account?{' '}
+            Belum punya akun?{' '}
             <Link to="/register" className="text-bc-primary hover:underline">
-              Sign up
+              Daftar
             </Link>
           </p>
         </div>
+
+        <p className="mt-4 text-center text-[10px] text-bc-text-muted">
+          Powered by Bitcoder · Bale Inovasi Teknologi
+        </p>
       </div>
     </div>
   );

@@ -3,9 +3,10 @@ import { HttpModule } from '@nestjs/axios';
 import { RagService } from './rag.service';
 import { RagController } from './rag.controller';
 import { ApiConfigModule } from '../api-config/api-config.module';
+import { AgentGatewayModule } from '../agent-gateway/agent-gateway.module';
 
 @Module({
-  imports: [HttpModule, ApiConfigModule],
+  imports: [HttpModule, ApiConfigModule, AgentGatewayModule],
   controllers: [RagController],
   providers: [RagService],
   exports: [RagService],

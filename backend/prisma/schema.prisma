@@ -12,11 +12,42 @@ model Organization {
   name      String
   slug      String   @unique
   isActive  Boolean  @default(true)
+  parentId  String?
+  parent    Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children  Organization[] @relation("OrgHierarchy")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   users     User[]
   contexts  Context[]
+  client    Client?
+  ssoConfig SSOConfig?
+  apiKeys   ApiKey[]
+  licenses  License[]
+}
+
+enum ClientStatus {
+  OFFLINE
+  ONLINE
+  SETTING_UP
+  ERROR
+}
+
+model Client {
+  id              String        @id @default(cuid())
+  name            String
+  agentKey        String        @unique
+  status          ClientStatus  @default(OFFLINE)
+  lastSeenAt      DateTime?
+  organizationId  String        @unique
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  dbConfig        Json?
+  aiConfig        Json?
+  storageConfig   Json?
+  healthStatus    Json?
+  branding        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 enum UserRole {
@@ -38,10 +69,14 @@ model User {
   organization   Organization @relation(fields: [organizationId], references: [id])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  lastLoginAt    DateTime?
 
-  chatSessions ChatSession[]
-  documents    Document[]
-  apiConfigs   ApiConfig[]
+  chatSessions   ChatSession[]
+  documents      Document[]
+  apiConfigs     ApiConfig[]
+  passwordResets PasswordReset[]
+  apiKeys        ApiKey[]
+  licenses       License[]
 
   @@index([organizationId])
   @@index([role])
@@ -156,4 +191,104 @@ model ChatMessage {
   createdAt DateTime    @default(now())
 
   @@index([sessionId])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+enum SSOProtocol {
+  SAML
+  OIDC
+}
+
+model SSOConfig {
+  id              String       @id @default(cuid())
+  name            String
+  protocol        SSOProtocol  @default(SAML)
+  isActive        Boolean      @default(false)
+  organizationId  String       @unique
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  entryPoint      String?
+  certificate     String?
+  issuer          String?
+
+  clientId        String?
+  clientSecret    String?
+  discoveryUrl    String?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  name           String
+  key            String    @unique
+  prefix         String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdById    String
+  createdBy      User      @relation(fields: [createdById], references: [id])
+  isActive       Boolean   @default(true)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@index([key])
+  @@index([prefix])
+}
+
+enum LicenseDuration {
+  ONE_WEEK
+  ONE_MONTH
+  ONE_YEAR
+  CUSTOM
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  PENDING
+}
+
+model License {
+  id             String           @id @default(cuid())
+  key            String           @unique
+  companyName    String
+  companyAlias   String
+  contactEmail   String
+  contactName    String?
+  phone          String?
+  duration       LicenseDuration  @default(ONE_MONTH)
+  status         LicenseStatus    @default(PENDING)
+  startDate      DateTime
+  expiresAt      DateTime
+  activatedAt    DateTime?
+  lastValidatedAt DateTime?
+  organizationId String?
+  organization   Organization?    @relation(fields: [organizationId], references: [id])
+  createdById    String
+  createdBy      User             @relation(fields: [createdById], references: [id])
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([key])
+  @@index([organizationId])
+  @@index([status])
+  @@index([expiresAt])
 }
