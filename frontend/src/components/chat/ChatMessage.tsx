@@ -1,5 +1,5 @@
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, ExternalLink, Download } from 'lucide-react';
+import { Bot, FileText, ExternalLink, Download, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import type { ChatMessage as ChatMessageType, SourceReference } from '../../types';
 
@@ -8,15 +8,10 @@ interface Props {
   isStreaming?: boolean;
 }
 
-function getBestSource(sources: SourceReference[]): SourceReference | null {
-  if (!sources || sources.length === 0) return null;
-  return sources.reduce((best, curr) => (curr.score > best.score ? curr : best), sources[0]);
-}
-
 export default function ChatMessage({ message, isStreaming }: Props) {
   const isUser = message.role === 'USER';
   const references = message.references;
-  const bestSource = !isUser && references?.sources ? getBestSource(references.sources) : null;
+  const sources = !isUser && references?.sources ? references.sources : [];
 
   return (
     <div className={clsx('animate-slide-up', isUser ? 'flex justify-end' : '')}>
@@ -47,34 +42,35 @@ export default function ChatMessage({ message, isStreaming }: Props) {
               </span>
             )}
 
-            {bestSource && (
-              <div className="mt-3 pt-3 border-t border-bc-border">
-                <a
-                  href={`/api/documents/download/${bestSource.document_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
-                >
-                  <FileText size={14} className="shrink-0" />
-                  <span className="truncate">{bestSource.document_name}</span>
-                  <Download size={12} className="shrink-0 ml-1" />
-                </a>
-              </div>
-            )}
-
-            {!isUser && references?.api_results && references.api_results.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-bc-border">
-                <div className="space-y-1.5">
-                  {references.api_results.map((api, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 rounded-lg bg-bc-bg-dark/50 px-3 py-2 text-xs"
-                    >
-                      <ExternalLink size={12} className="text-bc-secondary shrink-0" />
-                      <span className="truncate text-bc-text-secondary">{api.api_name}</span>
-                    </div>
-                  ))}
-                </div>
+            {sources.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-bc-border space-y-1.5">
+                {sources.map((source, idx) => (
+                  <div key={idx}>
+                    {source.source_type === 'crawl' && source.source_url ? (
+                      <a
+                        href={source.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
+                      >
+                        <Globe size={14} className="shrink-0" />
+                        <span className="truncate">{source.source_url}</span>
+                        <ExternalLink size={12} className="shrink-0 ml-1" />
+                      </a>
+                    ) : (
+                      <a
+                        href={`/api/documents/download/${source.document_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
+                      >
+                        <FileText size={14} className="shrink-0" />
+                        <span className="truncate">{source.document_name}</span>
+                        <Download size={12} className="shrink-0 ml-1" />
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

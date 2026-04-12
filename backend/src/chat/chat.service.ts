@@ -79,39 +79,28 @@ export class ChatService {
     }
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
-
-    const allSources: any[] = [];
-    const allApiConfigs: any[] = [];
-
-    for (const ctx of contexts) {
-      const apiConfigs = ctx.apiConfigs.map((ac) => ({
+    const contextIds = contexts.map((ctx) => ctx.id);
+    const allApiConfigs = contexts.flatMap((ctx) =>
+      ctx.apiConfigs.map((ac) => ({
         name: ac.name,
         endpoint: ac.endpoint,
         method: ac.method,
         headers: ac.headers as Record<string, string>,
         bodyTemplate: ac.bodyTemplate as Record<string, any>,
         isActive: ac.isActive,
-      }));
-      allApiConfigs.push(...apiConfigs);
+      })),
+    );
 
-      try {
-        const { data: searchData } = await firstValueFrom(
-          this.httpService.post(`${ragUrl}/api/query/search`, {
-            query: dto.content,
-            context_id: ctx.id,
-            organization_id: organizationId,
-            top_k: 3,
-          }),
-        );
+    const { data: searchData } = await firstValueFrom(
+      this.httpService.post(`${ragUrl}/api/query/search/multi`, {
+        query: dto.content,
+        context_ids: contextIds,
+        organization_id: organizationId,
+        top_k: 5,
+      }),
+    );
 
-        if (searchData?.sources) {
-          allSources.push(...searchData.sources);
-        }
-      } catch {}
-    }
-
-    allSources.sort((a, b) => (b.score || 0) - (a.score || 0));
-    const topSources = allSources.slice(0, 5);
+    const topSources: any[] = searchData?.sources || [];
 
     if (topSources.length === 0) {
       const noAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';

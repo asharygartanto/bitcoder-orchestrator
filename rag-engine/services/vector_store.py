@@ -59,6 +59,8 @@ class VectorStore:
                     "chunk_index": i,
                     "start_char": chunk.get("start_char", 0),
                     "end_char": chunk.get("end_char", 0),
+                    "source_type": chunk.get("source_type", "document"),
+                    "source_url": chunk.get("source_url", ""),
                 }
             )
             documents.append(chunk["content"])
@@ -114,7 +116,8 @@ class VectorStore:
                         "chunk_index": metadata.get("chunk_index", 0),
                         "content": doc,
                         "score": round(score, 4),
-                        "source_type": "document",
+                        "source_type": metadata.get("source_type", "document"),
+                        "source_url": metadata.get("source_url", ""),
                     }
                 )
 

@@ -78,6 +78,13 @@ class SearchRequest(BaseModel):
     top_k: int = 5
 
 
+class MultiSearchRequest(BaseModel):
+    query: str
+    context_ids: list[str]
+    organization_id: str
+    top_k: int = 5
+
+
 class GenerateRequest(BaseModel):
     query: str
     sources: list[SourceReference]

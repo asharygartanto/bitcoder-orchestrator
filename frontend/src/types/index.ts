@@ -90,6 +90,7 @@ export interface SourceReference {
   content: string;
   score: number;
   source_type: string;
+  source_url?: string;
 }
 
 export interface ApiResult {

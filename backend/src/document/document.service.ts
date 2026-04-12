@@ -5,6 +5,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class DocumentService {
@@ -159,5 +162,42 @@ export class DocumentService {
       where: { contextId, organizationId },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async download(documentId: string, organizationId: string, res: Response) {
+    const doc = await this.prisma.document.findFirst({
+      where: { id: documentId, organizationId },
+    });
+    if (!doc) throw new NotFoundException('Document not found');
+
+    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const docDir = path.join(uploadDir, organizationId, doc.contextId, documentId);
+
+    if (!fs.existsSync(docDir)) {
+      throw new NotFoundException('File not found on disk');
+    }
+
+    const files = fs.readdirSync(docDir);
+    if (files.length === 0) {
+      throw new NotFoundException('File not found on disk');
+    }
+
+    const filePath = path.join(docDir, files[0]);
+    const ext = path.extname(files[0]).toLowerCase();
+
+    const mimeTypes: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword',
+      '.txt': 'text/plain',
+      '.md': 'text/markdown',
+    };
+
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const fileName = doc.originalName || files[0];
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+    fs.createReadStream(filePath).pipe(res);
   }
 }

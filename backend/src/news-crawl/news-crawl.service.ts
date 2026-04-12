@@ -204,7 +204,11 @@ export class NewsCrawlService {
     parts.push('');
     parts.push(article.content);
 
-    return parts.join('\n');
+    return JSON.stringify({
+      text: parts.join('\n'),
+      source_type: 'crawl',
+      source_url: dto.url,
+    });
   }
 
   private sanitizeFileName(name: string): string {

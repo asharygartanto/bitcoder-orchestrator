@@ -5,13 +5,14 @@ import {
   Delete,
   Param,
   Req,
+  Res,
   UseGuards,
   UploadedFile,
   UseInterceptors,
   Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { DocumentService } from './document.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -82,5 +83,14 @@ export class DocumentController {
       file,
       name || file.originalname,
     );
+  }
+
+  @Get('download/:documentId')
+  async download(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('documentId') documentId: string,
+  ) {
+    return this.documentService.download(documentId, req.user!.organizationId, res);
   }
 }

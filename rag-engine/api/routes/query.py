@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest, SearchRequest, GenerateRequest
+from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest, SearchRequest, MultiSearchRequest, GenerateRequest
 from services.rag_pipeline import RAGPipeline
 
 router = APIRouter()
@@ -56,6 +56,20 @@ async def search_documents(request: SearchRequest):
         sources = rag_pipeline.search(
             query=request.query,
             context_id=request.context_id,
+            organization_id=request.organization_id,
+            top_k=request.top_k,
+        )
+        return {"sources": sources}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/search/multi")
+async def search_multi_documents(request: MultiSearchRequest):
+    try:
+        sources = rag_pipeline.search_multi(
+            query=request.query,
+            context_ids=request.context_ids,
             organization_id=request.organization_id,
             top_k=request.top_k,
         )

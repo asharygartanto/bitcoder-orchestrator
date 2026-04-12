@@ -50,48 +50,36 @@ class DocumentProcessor:
 
     def _extract_text(self, file_path: str) -> str:
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-            return f.read()
+            raw = f.read()
+        try:
+            import json
+            data = json.loads(raw)
+            if isinstance(data, dict) and "text" in data:
+                return data["text"]
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return raw
 
-    def chunk_text(
-        self,
-        text: str,
-        chunk_size: Optional[int] = None,
-        chunk_overlap: Optional[int] = None,
-    ) -> list[dict]:
-        chunk_size = chunk_size or settings.CHUNK_SIZE
-        chunk_overlap = chunk_overlap or settings.CHUNK_OVERLAP
+    def process_document(self, file_path: str) -> list[dict]:
+        text = self.extract_text(file_path)
+        chunks = self.chunk_text(text)
 
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text:
-            return []
+        source_type = "document"
+        source_url = ""
+        try:
+            import json
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                raw = f.read()
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                source_type = data.get("source_type", "document")
+                source_url = data.get("source_url", "")
+        except (json.JSONDecodeError, ValueError):
+            pass
 
-        chunks = []
-        start = 0
-        index = 0
-
-        while start < len(text):
-            end = start + chunk_size
-            chunk_text = text[start:end]
-
-            if end < len(text):
-                last_period = chunk_text.rfind(".")
-                last_newline = chunk_text.rfind("\n")
-                last_space = chunk_text.rfind(" ")
-                split_at = max(last_period, last_newline, last_space)
-                if split_at > start + chunk_size * 0.5:
-                    chunk_text = text[start : split_at + 1]
-                    end = split_at + 1
-
-            chunks.append(
-                {
-                    "index": index,
-                    "content": chunk_text.strip(),
-                    "start_char": start,
-                    "end_char": start + len(chunk_text),
-                }
-            )
-            start = end - chunk_overlap
-            index += 1
+        for chunk in chunks:
+            chunk["source_type"] = source_type
+            chunk["source_url"] = source_url
 
         return chunks
 
