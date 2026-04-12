@@ -252,8 +252,8 @@ function NavLink({
       }}
       onMouseLeave={(e) => {
         if (!active) {
-          e.currentTarget.style.background = undefined;
-          e.currentTarget.style.color = undefined;
+          e.currentTarget.style.background = '';
+          e.currentTarget.style.color = '';
         }
       }}
     >
