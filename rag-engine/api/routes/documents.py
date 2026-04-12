@@ -49,12 +49,15 @@ async def process_document_background(
     context_id: str,
     organization_id: str,
 ):
+    print(f"[DOC-DEBUG] [{document_id}] Background task started for {file_path}", flush=True)
     try:
-        logger.info(f"[{document_id}] Starting processing: {file_path}")
+        print(f"[DOC-DEBUG] [{document_id}] Creating services...", flush=True)
         processor = DocumentProcessor()
+        print(f"[DOC-DEBUG] [{document_id}] DocumentProcessor OK", flush=True)
         embedding_service = EmbeddingService()
+        print(f"[DOC-DEBUG] [{document_id}] EmbeddingService OK", flush=True)
         vector_store = VectorStore()
-        logger.info(f"[{document_id}] Starting processing: {file_path}")
+        print(f"[DOC-DEBUG] [{document_id}] VectorStore OK", flush=True)
         _update_status(
             document_id, DocumentStatus.PROCESSING, "Extracting text", 20, 0,
             "Membaca dan mengekstrak teks dari dokumen..."
@@ -62,25 +65,27 @@ async def process_document_background(
         await asyncio.sleep(0.1)
 
         chunks = processor.process_document(file_path)
+        print(f"[DOC-DEBUG] [{document_id}] Extracted {len(chunks)} chunks", flush=True)
         if not chunks:
-            logger.warning(f"[{document_id}] No chunks extracted from {file_path}")
+            print(f"[DOC-DEBUG] [{document_id}] No chunks extracted!", flush=True)
             _update_status(
                 document_id, DocumentStatus.ERROR, "Failed", 0, 0,
                 "Dokumen tidak mengandung teks yang dapat diproses."
             )
             return
 
-        logger.info(f"[{document_id}] Extracted {len(chunks)} chunks, generating embeddings...")
         _update_status(
             document_id, DocumentStatus.VECTORIZING, "Generating embeddings", 50, len(chunks),
             f"Menghasilkan {len(chunks)} vektor embeddings..."
         )
         await asyncio.sleep(0.1)
 
+        print(f"[DOC-DEBUG] [{document_id}] Generating embeddings...", flush=True)
         texts = [chunk["content"] for chunk in chunks]
         embeddings = embedding_service.embed_texts(texts)
+        print(f"[DOC-DEBUG] [{document_id}] Embeddings generated OK", flush=True)
 
-        logger.info(f"[{document_id}] Embeddings generated, storing vectors...")
+        print(f"[DOC-DEBUG] [{document_id}] Storing vectors...", flush=True)
         _update_status(
             document_id, DocumentStatus.INDEXING, "Storing vectors", 80, len(chunks),
             f"Menyimpan {len(chunks)} vektor ke database..."
@@ -96,14 +101,16 @@ async def process_document_background(
             embeddings=embeddings,
         )
 
-        logger.info(f"[{document_id}] Successfully stored {len(chunks)} chunks in vector store")
+        print(f"[DOC-DEBUG] [{document_id}] SUCCESS - {len(chunks)} chunks stored", flush=True)
         _update_status(
             document_id, DocumentStatus.READY, "Complete", 100, len(chunks),
             f"Dokumen berhasil diproses. {len(chunks)} chunks tersimpan."
         )
 
     except Exception as e:
-        logger.error(f"[{document_id}] Processing failed: {str(e)}", exc_info=True)
+        print(f"[DOC-DEBUG] [{document_id}] FAILED: {type(e).__name__}: {str(e)}", flush=True)
+        import traceback
+        traceback.print_exc()
         _update_status(
             document_id, DocumentStatus.ERROR, "Error", 0, 0, f"Error: {str(e)}"
         )
