@@ -49,11 +49,11 @@ async def process_document_background(
     context_id: str,
     organization_id: str,
 ):
-    processor = DocumentProcessor()
-    embedding_service = EmbeddingService()
-    vector_store = VectorStore()
-
     try:
+        logger.info(f"[{document_id}] Starting processing: {file_path}")
+        processor = DocumentProcessor()
+        embedding_service = EmbeddingService()
+        vector_store = VectorStore()
         logger.info(f"[{document_id}] Starting processing: {file_path}")
         _update_status(
             document_id, DocumentStatus.PROCESSING, "Extracting text", 20, 0,
