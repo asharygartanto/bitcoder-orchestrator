@@ -37,6 +37,9 @@ services:
     network_mode: host
     env_file:
       - .env
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+      - CHROMA_TELEMETRY_DISABLED=TRUE
     depends_on:
       chromadb:
         condition: service_started
