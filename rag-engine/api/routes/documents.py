@@ -1,8 +1,11 @@
 import os
 import shutil
 import asyncio
+import logging
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+
+logger = logging.getLogger(__name__)
 from api.schemas import (
     UploadResponse,
     DocumentStatus,
@@ -51,6 +54,7 @@ async def process_document_background(
     vector_store = VectorStore()
 
     try:
+        logger.info(f"[{document_id}] Starting processing: {file_path}")
         _update_status(
             document_id, DocumentStatus.PROCESSING, "Extracting text", 20, 0,
             "Membaca dan mengekstrak teks dari dokumen..."
@@ -59,12 +63,14 @@ async def process_document_background(
 
         chunks = processor.process_document(file_path)
         if not chunks:
+            logger.warning(f"[{document_id}] No chunks extracted from {file_path}")
             _update_status(
                 document_id, DocumentStatus.ERROR, "Failed", 0, 0,
                 "Dokumen tidak mengandung teks yang dapat diproses."
             )
             return
 
+        logger.info(f"[{document_id}] Extracted {len(chunks)} chunks, generating embeddings...")
         _update_status(
             document_id, DocumentStatus.VECTORIZING, "Generating embeddings", 50, len(chunks),
             f"Menghasilkan {len(chunks)} vektor embeddings..."
@@ -74,6 +80,7 @@ async def process_document_background(
         texts = [chunk["content"] for chunk in chunks]
         embeddings = embedding_service.embed_texts(texts)
 
+        logger.info(f"[{document_id}] Embeddings generated, storing vectors...")
         _update_status(
             document_id, DocumentStatus.INDEXING, "Storing vectors", 80, len(chunks),
             f"Menyimpan {len(chunks)} vektor ke database..."
@@ -89,12 +96,14 @@ async def process_document_background(
             embeddings=embeddings,
         )
 
+        logger.info(f"[{document_id}] Successfully stored {len(chunks)} chunks in vector store")
         _update_status(
             document_id, DocumentStatus.READY, "Complete", 100, len(chunks),
             f"Dokumen berhasil diproses. {len(chunks)} chunks tersimpan."
         )
 
     except Exception as e:
+        logger.error(f"[{document_id}] Processing failed: {str(e)}", exc_info=True)
         _update_status(
             document_id, DocumentStatus.ERROR, "Error", 0, 0, f"Error: {str(e)}"
         )
