@@ -179,7 +179,7 @@ class RAGPipeline:
                     organization_id=organization_id,
                     context_id=ctx_id,
                     query_embedding=query_embedding,
-                    top_k=3,
+                    top_k=top_k,
                 )
                 all_sources.extend(results)
             except Exception:
@@ -194,15 +194,7 @@ class RAGPipeline:
                     s["score"] = s.get("score", 0) + 0.1
 
         all_sources.sort(key=lambda s: s.get("score", 0), reverse=True)
-
-        seen = set()
-        unique = []
-        for s in all_sources:
-            if s["document_id"] not in seen:
-                seen.add(s["document_id"])
-                unique.append(s)
-
-        return unique[:top_k]
+        return all_sources[:top_k]
 
     async def generate(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> dict:
         context_chunks = [
