@@ -33,7 +33,10 @@ function getCrawlLabel(source: SourceReference): string {
 export default function ChatMessage({ message, isStreaming }: Props) {
   const isUser = message.role === 'USER';
   const references = message.references;
-  const sources = !isUser && references?.sources ? references.sources : [];
+  const rawSources = !isUser && references?.sources ? references.sources : [];
+  const sources = Array.from(
+    new Map(rawSources.map((s) => [s.document_id || s.source_url || s.document_name, s])).values(),
+  ).slice(0, 1);
 
   return (
     <div className={clsx('animate-slide-up', isUser ? 'flex justify-end' : '')}>
