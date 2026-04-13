@@ -16,6 +16,8 @@ export class ChatService {
 
   private async enrichSources(sources: any[]): Promise<any> {
     const enriched = await Promise.all(sources.map(async (s: any) => {
+      const isCrawlById = s.document_id?.startsWith('crawl_');
+
       try {
         const doc = await this.prisma.document.findUnique({
           where: { id: s.document_id },
@@ -29,6 +31,12 @@ export class ChatService {
           return { ...s, document_name: doc.name };
         }
       } catch {}
+
+      if (isCrawlById) {
+        const url = s.source_url || s.document_name?.startsWith('http') ? s.document_name : '';
+        return { ...s, source_type: 'crawl', source_url: url, document_name: url || s.document_name };
+      }
+
       return s;
     }));
 

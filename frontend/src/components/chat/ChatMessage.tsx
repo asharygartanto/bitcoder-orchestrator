@@ -16,11 +16,14 @@ function getDownloadUrl(documentId: string): string {
 function isCrawlSource(source: SourceReference): boolean {
   if (source.source_type === 'crawl' && source.source_url) return true;
   if (source.document_name?.includes('[CRAWL]')) return true;
+  if (source.document_id?.startsWith('crawl_')) return true;
+  if (source.document_name?.startsWith('http')) return true;
   return false;
 }
 
 function getCrawlUrl(source: SourceReference): string {
   if (source.source_url) return source.source_url;
+  if (source.document_name?.startsWith('http')) return source.document_name;
   const urlMatch = source.document_name?.match(/https?:\/\/[^\s\]]+/);
   return urlMatch ? urlMatch[0] : '';
 }
