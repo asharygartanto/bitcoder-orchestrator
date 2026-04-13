@@ -145,10 +145,13 @@ export class ChatService {
 
     const uniqueRef = await this.enrichSources(topSources);
 
+    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 2);
+    const relevantSources = topSources.filter((s: any) => topDocIds.includes(s.document_id));
+
     const { data: generateData } = await firstValueFrom(
       this.httpService.post(`${ragUrl}/api/query/generate`, {
         query: dto.content,
-        sources: topSources,
+        sources: relevantSources,
         api_configs: allApiConfigs.length > 0 ? allApiConfigs : undefined,
       }),
     );
@@ -257,12 +260,15 @@ export class ChatService {
     }));
     res.write(`data: ${JSON.stringify({ type: 'metadata', sources: metadataSources, context_used: topSources.length })}\n\n`);
 
+    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 2);
+    const relevantSources = topSources.filter((s: any) => topDocIds.includes(s.document_id));
+
     let fullAnswer = '';
     try {
       const ragResponse = await fetch(`${ragUrl}/api/query/generate/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: content, sources: topSources }),
+        body: JSON.stringify({ query: content, sources: relevantSources }),
       });
 
       const reader = (ragResponse as any).body.getReader();
