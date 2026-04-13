@@ -16,20 +16,23 @@ import LicensesPage from './pages/LicensesPage';
 import AppLayout from './components/layout/AppLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isHydrated } = useAuthStore();
+  if (!isHydrated) return null;
   if (!isAuthenticated) return <Navigate to="/login" />;
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
+  const { user, isHydrated } = useAuthStore();
+  if (!isHydrated) return null;
   if (!user) return <Navigate to="/login" />;
   if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') return <Navigate to="/" />;
   return <>{children}</>;
 }
 
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
+  const { user, isHydrated } = useAuthStore();
+  if (!isHydrated) return null;
   if (!user) return <Navigate to="/login" />;
   if (user.role !== 'SUPER_ADMIN') return <Navigate to="/" />;
   return <>{children}</>;
