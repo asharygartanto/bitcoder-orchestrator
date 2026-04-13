@@ -11,7 +11,7 @@ interface Props {
 function getDownloadUrl(documentId: string): string {
   const token = localStorage.getItem('bitcoder_token');
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
-  return `${baseUrl}/api/documents/download/${documentId}?token=${token}`;
+  return `${baseUrl}/api/doc/download/${documentId}?token=${token}`;
 }
 
 export default function ChatMessage({ message, isStreaming }: Props) {
