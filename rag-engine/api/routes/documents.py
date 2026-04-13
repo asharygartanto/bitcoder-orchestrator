@@ -125,16 +125,37 @@ async def reindex_context_background(context_id: str, organization_id: str):
             continue
 
         file_path = os.path.join(doc_path, files[0])
+
+        is_crawl = doc_dir.startswith("crawl_")
+        crawl_url = ""
+        crawl_name = files[0]
+        if is_crawl:
+            try:
+                import json
+                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    raw = f.read()
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    crawl_url = data.get("source_url", "")
+                    crawl_name = data.get("source_url", files[0])
+            except (json.JSONDecodeError, ValueError):
+                crawl_name = doc_dir
+
         try:
             chunks = processor.process_document(file_path)
             if chunks:
+                if is_crawl:
+                    for chunk in chunks:
+                        chunk["source_type"] = "crawl"
+                        chunk["source_url"] = crawl_url
+
                 texts = [chunk["content"] for chunk in chunks]
                 embeddings = embedding_service.embed_texts(texts)
                 vector_store.add_documents(
                     organization_id=organization_id,
                     context_id=context_id,
                     document_id=doc_dir,
-                    document_name=files[0],
+                    document_name=crawl_name,
                     chunks=chunks,
                     embeddings=embeddings,
                 )

@@ -15,17 +15,19 @@ function getDownloadUrl(documentId: string): string {
 
 function isCrawlSource(source: SourceReference): boolean {
   if (source.source_type === 'crawl' && source.source_url) return true;
-  if (source.document_name?.startsWith('[CRAWL]')) {
-    const urlMatch = source.document_name.match(/https?:\/\/[^\s]+/);
-    if (urlMatch) return true;
-  }
+  if (source.document_name?.includes('[CRAWL]')) return true;
   return false;
 }
 
 function getCrawlUrl(source: SourceReference): string {
   if (source.source_url) return source.source_url;
-  const urlMatch = source.document_name.match(/https?:\/\/[^\s]+/);
+  const urlMatch = source.document_name?.match(/https?:\/\/[^\s\]]+/);
   return urlMatch ? urlMatch[0] : '';
+}
+
+function getCrawlLabel(source: SourceReference): string {
+  const url = getCrawlUrl(source);
+  return url || source.document_name;
 }
 
 export default function ChatMessage({ message, isStreaming }: Props) {
@@ -76,7 +78,7 @@ export default function ChatMessage({ message, isStreaming }: Props) {
                         className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
                       >
                         <Globe size={14} className="shrink-0" />
-                        <span className="truncate">{getCrawlUrl(source)}</span>
+                        <span className="truncate">{getCrawlLabel(source)}</span>
                         <ExternalLink size={12} className="shrink-0 ml-1" />
                       </a>
                     ) : (
