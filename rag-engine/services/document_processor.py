@@ -60,9 +60,52 @@ class DocumentProcessor:
             pass
         return raw
 
+    def _split_text(
+        self,
+        text: str,
+        chunk_size: Optional[int] = None,
+        chunk_overlap: Optional[int] = None,
+    ) -> list[dict]:
+        chunk_size = chunk_size or settings.CHUNK_SIZE
+        chunk_overlap = chunk_overlap or settings.CHUNK_OVERLAP
+
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            return []
+
+        chunks = []
+        start = 0
+        index = 0
+
+        while start < len(text):
+            end = start + chunk_size
+            chunk_text = text[start:end]
+
+            if end < len(text):
+                last_period = chunk_text.rfind(".")
+                last_newline = chunk_text.rfind("\n")
+                last_space = chunk_text.rfind(" ")
+                split_at = max(last_period, last_newline, last_space)
+                if split_at > start + chunk_size * 0.5:
+                    chunk_text = text[start : split_at + 1]
+                    end = split_at + 1
+
+            chunks.append(
+                {
+                    "index": index,
+                    "content": chunk_text.strip(),
+                    "start_char": start,
+                    "end_char": start + len(chunk_text),
+                }
+            )
+            start = end - chunk_overlap
+            index += 1
+
+        return chunks
+
     def process_document(self, file_path: str) -> list[dict]:
         text = self.extract_text(file_path)
-        chunks = self.chunk_text(text)
+        chunks = self._split_text(text)
 
         source_type = "document"
         source_url = ""
@@ -81,9 +124,4 @@ class DocumentProcessor:
             chunk["source_type"] = source_type
             chunk["source_url"] = source_url
 
-        return chunks
-
-    def process_document(self, file_path: str) -> list[dict]:
-        text = self.extract_text(file_path)
-        chunks = self.chunk_text(text)
         return chunks
