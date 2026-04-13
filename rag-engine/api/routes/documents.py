@@ -137,9 +137,17 @@ async def reindex_context_background(context_id: str, organization_id: str):
                 data = json.loads(raw)
                 if isinstance(data, dict):
                     crawl_url = data.get("source_url", "")
-                    crawl_name = data.get("source_url", files[0])
+                    crawl_name = crawl_url or data.get("text", "").split("Sumber: ")[1].split("\n")[0] if "Sumber: " in data.get("text", "") else files[0]
             except (json.JSONDecodeError, ValueError):
-                crawl_name = doc_dir
+                import re
+                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    raw = f.read()
+                url_match = re.search(r'Sumber:\s*(https?://\S+)', raw)
+                if url_match:
+                    crawl_url = url_match.group(1)
+                    crawl_name = crawl_url
+                else:
+                    crawl_name = doc_dir
 
         try:
             chunks = processor.process_document(file_path)
