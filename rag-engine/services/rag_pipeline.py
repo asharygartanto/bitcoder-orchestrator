@@ -49,7 +49,7 @@ class RAGPipeline:
             "konteks yang diberikan. Jawablah dengan bahasa yang sama dengan pertanyaan user. "
             "Gunakan informasi dari dokumen referensi dan data API yang tersedia. "
             "Jika informasi tidak tersedia dalam konteks, katakan dengan jujur bahwa kamu tidak memiliki informasi tersebut. "
-            "Selalu sertakan referensi sumber dokumen atau API dalam jawabanmu.\n\n"
+            "JANGAN menyertakan daftar referensi atau sumber di akhir jawabanmu.\n\n"
             f"### Konteks:\n{context_text}"
         )
 

@@ -50,8 +50,10 @@ export default function ChatMessage({ message, isStreaming }: Props) {
 
             {sources.length > 0 && (
               <div className="mt-3 pt-3 border-t border-bc-border space-y-1.5">
-                {sources.map((source, idx) => (
-                  <div key={idx}>
+                {Array.from(
+                  new Map(sources.map((s) => [s.document_id, s])).values(),
+                ).map((source) => (
+                  <div key={source.document_id}>
                     {source.source_type === 'crawl' && source.source_url ? (
                       <a
                         href={source.source_url}
