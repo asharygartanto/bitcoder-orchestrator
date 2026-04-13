@@ -171,21 +171,28 @@ class RAGPipeline:
 
     def search_multi(self, query: str, context_ids: list[str], organization_id: str, top_k: int = 5) -> list[dict]:
         query_embedding = self.embedding_service.embed_query(query)
-        all_sources = []
+        best_ctx_sources = []
+        best_ctx_score = 0
+
         for ctx_id in context_ids:
             try:
                 results = self.vector_store.query(
                     organization_id=organization_id,
                     context_id=ctx_id,
                     query_embedding=query_embedding,
-                    top_k=3,
+                    top_k=top_k,
                 )
-                all_sources.extend(results)
+                if not results:
+                    continue
+                ctx_top_score = results[0].get("score", 0)
+                if ctx_top_score > best_ctx_score:
+                    best_ctx_score = ctx_top_score
+                    best_ctx_sources = results
             except Exception:
                 continue
-        all_sources = [s for s in all_sources if s.get("score", 0) >= 0.3]
-        all_sources.sort(key=lambda s: s.get("score", 0), reverse=True)
-        return all_sources[:top_k]
+
+        best_ctx_sources = [s for s in best_ctx_sources if s.get("score", 0) >= 0.3]
+        return best_ctx_sources[:top_k]
 
     async def generate(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> dict:
         context_chunks = [
