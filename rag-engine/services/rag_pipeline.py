@@ -184,8 +184,25 @@ class RAGPipeline:
                 all_sources.extend(results)
             except Exception:
                 continue
+
+        query_lower = query.lower()
+        query_words = query_lower.split()
+        for s in all_sources:
+            text = (s.get("source_url", "") + " " + s.get("document_name", "")).lower()
+            for word in query_words:
+                if len(word) > 2 and word in text:
+                    s["score"] = s.get("score", 0) + 0.1
+
         all_sources.sort(key=lambda s: s.get("score", 0), reverse=True)
-        return all_sources[:top_k]
+
+        seen = set()
+        unique = []
+        for s in all_sources:
+            if s["document_id"] not in seen:
+                seen.add(s["document_id"])
+                unique.append(s)
+
+        return unique[:top_k]
 
     async def generate(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> dict:
         context_chunks = [
