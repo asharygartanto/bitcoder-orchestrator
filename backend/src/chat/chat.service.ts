@@ -145,7 +145,7 @@ export class ChatService {
 
     const uniqueRef = await this.enrichSources(topSources);
 
-    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 2);
+    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 1);
     const relevantSources = topSources.filter((s: any) => topDocIds.includes(s.document_id));
 
     const { data: generateData } = await firstValueFrom(
@@ -260,7 +260,7 @@ export class ChatService {
     }));
     res.write(`data: ${JSON.stringify({ type: 'metadata', sources: metadataSources, context_used: topSources.length })}\n\n`);
 
-    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 2);
+    const topDocIds = [...new Set(topSources.map((s: any) => s.document_id))].slice(0, 1);
     const relevantSources = topSources.filter((s: any) => topDocIds.includes(s.document_id));
 
     let fullAnswer = '';
