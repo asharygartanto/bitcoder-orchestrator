@@ -221,6 +221,7 @@ class RAGPipeline:
 
         sources_meta = [
             {
+                "document_id": s.get("document_id", ""),
                 "document_name": s.get("document_name", ""),
                 "score": s.get("score", 0),
                 "source_type": s.get("source_type", "document"),
