@@ -89,3 +89,27 @@ async def generate_answer(request: GenerateRequest):
         return QueryResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate/stream")
+async def generate_answer_stream(request: GenerateRequest):
+    async def event_generator():
+        try:
+            async for chunk in rag_pipeline.generate_stream(
+                query=request.query,
+                sources=[s.model_dump() for s in request.sources],
+                api_results=request.api_results,
+            ):
+                yield chunk
+        except Exception as e:
+            yield f"data: {{'type': 'error', 'message': '{str(e)}'}}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

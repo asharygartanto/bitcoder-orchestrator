@@ -75,7 +75,7 @@ export class NewsCrawlService {
     };
   }
 
-  async crawlAndIndex(dto: CrawlUrlDto, organizationId: string) {
+  async crawlAndIndex(dto: CrawlUrlDto, organizationId: string, userId: string) {
     const html = await this.fetchPage(dto.url);
     const article = this.extractArticle(html, dto.url);
 
@@ -104,6 +104,20 @@ export class NewsCrawlService {
         timeout: 120000,
       }),
     );
+
+    await this.prisma.document.create({
+      data: {
+        id: documentId,
+        name: documentName,
+        originalName: 'article.txt',
+        fileType: 'text/plain',
+        fileSize: Buffer.byteLength(textContent, 'utf-8'),
+        contextId: dto.contextId,
+        organizationId,
+        uploadedById: userId,
+        status: 'PROCESSING',
+      },
+    });
 
     return {
       success: true,

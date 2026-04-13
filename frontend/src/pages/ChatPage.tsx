@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useChatStore } from '../stores/chat.store';
 import {
   getSessions,
   createSession,
   deleteSession,
-  sendMessage,
   getSession,
+  sendMessageStream,
 } from '../services/chat';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -28,8 +28,8 @@ export default function ChatPage() {
     removeSession,
   } = useChatStore();
 
-  const streamingContent = '';
-  const streamingSources: SourceReference[] = [];
+  const [streamingContent, setStreamingContent] = useState('');
+  const [streamingSources, setStreamingSources] = useState<SourceReference[]>([]);
 
   useEffect(() => {
     loadSessions();
@@ -74,14 +74,14 @@ export default function ChatPage() {
         const session = await createSession(content.substring(0, 50));
         setSessions([session, ...sessions]);
         setActiveSession({ ...session, messages: [] });
-        await doSend(session.id, content);
+        await doStream(session.id, content);
       } catch {}
     } else {
-      await doSend(activeSession.id, content);
+      await doStream(activeSession.id, content);
     }
   };
 
-  const doSend = async (sessionId: string, content: string) => {
+  const doStream = async (sessionId: string, content: string) => {
     const userMsg: ChatMessage = {
       id: `temp-${Date.now()}`,
       sessionId,
@@ -92,23 +92,42 @@ export default function ChatPage() {
     };
     addMessage(userMsg);
     setSending(true);
+    setStreamingContent('');
+    setStreamingSources([]);
+
+    let fullContent = '';
+    let sources: SourceReference[] = [];
 
     try {
-      const result = await sendMessage(sessionId, content);
-      addMessage(result.message);
-    } catch {
-      const errMsg: ChatMessage = {
-        id: `err-${Date.now()}`,
+      await sendMessageStream(
         sessionId,
-        role: 'ASSISTANT',
-        content: 'Sorry, an error occurred. Please try again.',
-        references: null,
-        createdAt: new Date().toISOString(),
-      };
-      addMessage(errMsg);
-    } finally {
-      setSending(false);
+        content,
+        (chunk) => {
+          fullContent += chunk;
+          setStreamingContent(fullContent);
+        },
+        (meta) => {
+          sources = meta;
+          setStreamingSources(meta);
+        },
+        () => {},
+      );
+    } catch {
+      fullContent = fullContent || 'Sorry, an error occurred. Please try again.';
     }
+
+    const assistantMsg: ChatMessage = {
+      id: `stream-${Date.now()}`,
+      sessionId,
+      role: 'ASSISTANT',
+      content: fullContent,
+      references: sources.length > 0 ? { sources, api_results: null } : null,
+      createdAt: new Date().toISOString(),
+    };
+    addMessage(assistantMsg);
+    setSending(false);
+    setStreamingContent('');
+    setStreamingSources([]);
   };
 
   return (

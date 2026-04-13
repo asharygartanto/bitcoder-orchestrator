@@ -1,5 +1,6 @@
 from openai import OpenAI
 from typing import AsyncIterator, Optional
+import json
 from config import get_settings
 from services.embedding_service import EmbeddingService
 from services.vector_store import VectorStore
@@ -210,3 +211,39 @@ class RAGPipeline:
             "api_results": api_results,
             "context_used": len(sources),
         }
+
+    async def generate_stream(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> AsyncIterator[str]:
+        context_chunks = [
+            {"document_name": s["document_name"], "content": s["content"]}
+            for s in sources
+        ]
+        system_prompt = self._build_system_prompt(context_chunks, api_results)
+
+        sources_meta = [
+            {
+                "document_name": s.get("document_name", ""),
+                "score": s.get("score", 0),
+                "source_type": s.get("source_type", "document"),
+                "source_url": s.get("source_url", ""),
+            }
+            for s in sources
+        ]
+        yield f"data: {json.dumps({'type': 'metadata', 'sources': sources_meta, 'context_used': len(sources)})}\n\n"
+
+        stream = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query},
+            ],
+            max_tokens=settings.AI_MAX_TOKENS,
+            temperature=settings.AI_TEMPERATURE,
+            stream=True,
+        )
+
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                yield f"data: {content}\n\n"
+
+        yield "data: [DONE]\n\n"

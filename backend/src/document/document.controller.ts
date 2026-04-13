@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -18,11 +19,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DocumentController {
-  constructor(private documentService: DocumentService) {}
+  constructor(
+    private documentService: DocumentService,
+    private jwtService: JwtService,
+  ) {}
 
   @Post('upload/:contextId')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -90,7 +95,18 @@ export class DocumentController {
     @Req() req: Request,
     @Res() res: Response,
     @Param('documentId') documentId: string,
+    @Query('token') token?: string,
   ) {
-    return this.documentService.download(documentId, req.user!.organizationId, res);
+    let organizationId = req.user?.organizationId;
+    if (!organizationId && token) {
+      try {
+        const payload = this.jwtService.verify(token);
+        organizationId = payload.organizationId;
+      } catch {
+        res.status(401).json({ message: 'Invalid token' });
+        return;
+      }
+    }
+    return this.documentService.download(documentId, organizationId!, res);
   }
 }

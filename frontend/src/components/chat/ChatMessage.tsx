@@ -8,6 +8,12 @@ interface Props {
   isStreaming?: boolean;
 }
 
+function getDownloadUrl(documentId: string): string {
+  const token = localStorage.getItem('bitcoder_token');
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+  return `${baseUrl}/api/documents/download/${documentId}?token=${token}`;
+}
+
 export default function ChatMessage({ message, isStreaming }: Props) {
   const isUser = message.role === 'USER';
   const references = message.references;
@@ -59,7 +65,7 @@ export default function ChatMessage({ message, isStreaming }: Props) {
                       </a>
                     ) : (
                       <a
-                        href={`/api/documents/download/${source.document_id}`}
+                        href={getDownloadUrl(source.document_id)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"

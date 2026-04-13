@@ -16,7 +16,7 @@ export class NewsCrawlController {
   @Roles(UserRole.SUPER_ADMIN)
   async crawlUrl(@Body() dto: CrawlUrlDto, @Req() req: any) {
     const orgId = dto.organizationId || req.user.organizationId;
-    return this.crawlService.crawlAndIndex(dto, orgId);
+    return this.crawlService.crawlAndIndex(dto, orgId, req.user.id);
   }
 
   @Post('bulk')

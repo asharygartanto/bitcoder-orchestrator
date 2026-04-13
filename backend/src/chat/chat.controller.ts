@@ -6,9 +6,10 @@ import {
   Param,
   Body,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ChatService } from './chat.service';
 import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -64,6 +65,22 @@ export class ChatController {
       sessionId,
       req.user!.id,
       dto,
+    );
+  }
+
+  @Post('sessions/:sessionId/messages/stream')
+  async sendMessageStream(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendMessageDto,
+  ) {
+    return this.chatService.sendMessageStream(
+      req.user!.organizationId,
+      sessionId,
+      req.user!.id,
+      dto.content,
+      res,
     );
   }
 }

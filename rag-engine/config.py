@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     AI_API_BASE_URL: str = "https://agent.baleinovasiteknologi.com/v1"
     AI_CHAT_MODEL: str = "bitcoder-jago"
     AI_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    AI_MAX_TOKENS: int = 4096
+    AI_MAX_TOKENS: int = 1024
     AI_TEMPERATURE: float = 0.7
 
     CHROMA_HOST: str = "localhost"
