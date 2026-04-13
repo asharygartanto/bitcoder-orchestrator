@@ -14,6 +14,29 @@ export class ChatService {
     private apiConfigService: ApiConfigService,
   ) {}
 
+  private async enrichSources(sources: any[]): Promise<any> {
+    const enriched = await Promise.all(sources.map(async (s: any) => {
+      try {
+        const doc = await this.prisma.document.findUnique({
+          where: { id: s.document_id },
+          select: { name: true },
+        });
+        if (doc?.name?.includes('[CRAWL]')) {
+          const url = doc.name.replace('[CRAWL]', '').trim();
+          return { ...s, source_type: 'crawl', source_url: url, document_name: url };
+        }
+        if (doc?.name) {
+          return { ...s, document_name: doc.name };
+        }
+      } catch {}
+      return s;
+    }));
+
+    return Array.from(
+      new Map(enriched.map((s: any) => [s.document_id, s])).values(),
+    ).slice(0, 1);
+  }
+
   async createSession(organizationId: string, userId: string, dto: CreateSessionDto) {
     return this.prisma.chatSession.create({
       data: {
@@ -112,26 +135,7 @@ export class ChatService {
       return { message: assistantMessage, sources: [], api_results: [] };
     }
 
-    const enrichedNonStream = await Promise.all(topSources.map(async (s: any) => {
-      try {
-        const doc = await this.prisma.document.findUnique({
-          where: { id: s.document_id },
-          select: { name: true },
-        });
-        if (doc?.name?.includes('[CRAWL]')) {
-          const url = doc.name.replace('[CRAWL]', '').trim();
-          return { ...s, source_type: 'crawl', source_url: url, document_name: url };
-        }
-        if (doc?.name) {
-          return { ...s, document_name: doc.name };
-        }
-      } catch {}
-      return s;
-    }));
-
-    const uniqueRef = Array.from(
-      new Map(enrichedNonStream.map((s: any) => [s.document_id, s])).values(),
-    ).slice(0, 1);
+    const uniqueRef = await this.enrichSources(topSources);
 
     const { data: generateData } = await firstValueFrom(
       this.httpService.post(`${ragUrl}/api/query/generate`, {
@@ -235,27 +239,8 @@ export class ChatService {
       return;
     }
 
-    const enrichedSources = await Promise.all(topSources.map(async (s: any) => {
-      try {
-        const doc = await this.prisma.document.findUnique({
-          where: { id: s.document_id },
-          select: { name: true },
-        });
-        if (doc?.name?.includes('[CRAWL]')) {
-          const url = doc.name.replace('[CRAWL]', '').trim();
-          return { ...s, source_type: 'crawl', source_url: url, document_name: url };
-        }
-        if (doc?.name) {
-          return { ...s, document_name: doc.name };
-        }
-      } catch {}
-      return s;
-    }));
-
-    const uniqueSources = Array.from(
-      new Map(enrichedSources.map((s: any) => [s.document_id, s])).values(),
-    ).slice(0, 1);
-    const metadataSources = uniqueSources.map((s: any) => ({
+    const enrichedSources = await this.enrichSources(topSources);
+    const metadataSources = enrichedSources.map((s: any) => ({
       document_id: s.document_id,
       document_name: s.document_name,
       score: s.score,
