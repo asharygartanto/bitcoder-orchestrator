@@ -216,7 +216,7 @@ export class ChatService {
 
     const uniqueSources = Array.from(
       new Map(topSources.map((s: any) => [s.document_id, s])).values(),
-    );
+    ).slice(0, 2);
     const metadataSources = uniqueSources.map((s: any) => ({
       document_id: s.document_id,
       document_name: s.document_name,
