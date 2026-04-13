@@ -178,11 +178,12 @@ class RAGPipeline:
                     organization_id=organization_id,
                     context_id=ctx_id,
                     query_embedding=query_embedding,
-                    top_k=top_k,
+                    top_k=3,
                 )
                 all_sources.extend(results)
             except Exception:
                 continue
+        all_sources = [s for s in all_sources if s.get("score", 0) >= 0.3]
         all_sources.sort(key=lambda s: s.get("score", 0), reverse=True)
         return all_sources[:top_k]
 
