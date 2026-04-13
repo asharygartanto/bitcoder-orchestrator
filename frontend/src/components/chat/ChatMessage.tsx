@@ -10,8 +10,22 @@ interface Props {
 
 function getDownloadUrl(documentId: string): string {
   const token = localStorage.getItem('bitcoder_token');
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
-  return `${baseUrl}/api/doc/download/${documentId}?token=${token}`;
+  return `/api/doc/download/${documentId}?token=${token}`;
+}
+
+function isCrawlSource(source: SourceReference): boolean {
+  if (source.source_type === 'crawl' && source.source_url) return true;
+  if (source.document_name?.startsWith('[CRAWL]')) {
+    const urlMatch = source.document_name.match(/https?:\/\/[^\s]+/);
+    if (urlMatch) return true;
+  }
+  return false;
+}
+
+function getCrawlUrl(source: SourceReference): string {
+  if (source.source_url) return source.source_url;
+  const urlMatch = source.document_name.match(/https?:\/\/[^\s]+/);
+  return urlMatch ? urlMatch[0] : '';
 }
 
 export default function ChatMessage({ message, isStreaming }: Props) {
@@ -54,15 +68,15 @@ export default function ChatMessage({ message, isStreaming }: Props) {
                   new Map(sources.map((s) => [s.document_id, s])).values(),
                 ).map((source) => (
                   <div key={source.document_id}>
-                    {source.source_type === 'crawl' && source.source_url ? (
+                    {isCrawlSource(source) ? (
                       <a
-                        href={source.source_url}
+                        href={getCrawlUrl(source)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg bg-bc-primary/8 border border-bc-primary/20 px-3 py-2 text-xs font-medium text-bc-primary hover:bg-bc-primary/15 transition-colors"
                       >
                         <Globe size={14} className="shrink-0" />
-                        <span className="truncate">{source.source_url}</span>
+                        <span className="truncate">{getCrawlUrl(source)}</span>
                         <ExternalLink size={12} className="shrink-0 ml-1" />
                       </a>
                     ) : (
