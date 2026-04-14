@@ -128,11 +128,11 @@ export class ChatService {
         query: dto.content,
         context_ids: contextIds,
         organization_id: organizationId,
-        top_k: 5,
-      }),
-    );
+            top_k: 15,
+          }),
+        );
 
-    const topSources: any[] = searchData?.sources || [];
+        const topSources: any[] = searchData?.sources || [];
 
     if (topSources.length === 0) {
       const noAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
@@ -222,7 +222,7 @@ export class ChatService {
             query: content,
             context_ids: contextIds,
             organization_id: organizationId,
-            top_k: 5,
+            top_k: 15,
           }),
         );
         topSources = searchData?.sources || [];
