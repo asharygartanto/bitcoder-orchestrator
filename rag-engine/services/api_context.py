@@ -31,6 +31,10 @@ class ApiContextService:
         headers = api_config.get("headers", {})
         body_template = api_config.get("body_template")
 
+        print(f"[API-DEBUG] Calling {method} {endpoint}", flush=True)
+        print(f"[API-DEBUG] Headers: {headers}", flush=True)
+        print(f"[API-DEBUG] Body: {body_template}", flush=True)
+
         if not endpoint:
             return None
 
