@@ -231,6 +231,7 @@ class RAGPipeline:
             for s in sources
         ]
         system_prompt = self._build_system_prompt(context_chunks, api_results)
+        print(f"[GEN-DEBUG] system_prompt last 500 chars: {system_prompt[-500:]}", flush=True)
 
         sources_meta = [
             {
