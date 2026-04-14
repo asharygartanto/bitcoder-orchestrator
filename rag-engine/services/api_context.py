@@ -50,7 +50,7 @@ class ApiContextService:
             return {"error": str(e), "endpoint": endpoint}
 
     async def gather_api_contexts(
-        self, api_configs: list[dict]
+        self, api_configs: list[dict], query: str = ""
     ) -> list[dict]:
         if not api_configs:
             return []
@@ -59,6 +59,13 @@ class ApiContextService:
         for config in api_configs:
             if not config.get("is_active", True):
                 continue
+
+            body_template = config.get("body_template")
+            if body_template and query:
+                body_str = json.dumps(body_template)
+                body_str = body_str.replace("{{query}}", query)
+                config = {**config, "body_template": json.loads(body_str)}
+
             result = await self.call_api(config)
             if result:
                 results.append(

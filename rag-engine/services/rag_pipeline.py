@@ -73,7 +73,7 @@ class RAGPipeline:
 
         api_results = None
         if api_configs:
-            api_results = await self.api_context.gather_api_contexts(api_configs)
+            api_results = await self.api_context.gather_api_contexts(api_configs, query)
 
         context_chunks = [
             {
@@ -123,7 +123,7 @@ class RAGPipeline:
 
         api_results = None
         if api_configs:
-            api_results = await self.api_context.gather_api_contexts(api_configs)
+            api_results = await self.api_context.gather_api_contexts(api_configs, query)
 
         context_chunks = [
             {
