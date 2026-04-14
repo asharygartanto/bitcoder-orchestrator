@@ -9,7 +9,7 @@ class ApiContextService:
 
     async def call_api(self, api_config: dict) -> Optional[dict]:
         method = api_config.get("method", "GET").upper()
-        endpoint = api_config.get("endpoint", "")
+        endpoint = api_config.get("endpoint", "").strip()
         headers = api_config.get("headers", {})
         body_template = api_config.get("body_template")
 

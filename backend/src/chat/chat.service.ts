@@ -118,8 +118,8 @@ export class ChatService {
         endpoint: ac.endpoint,
         method: ac.method,
         headers: ac.headers as Record<string, string>,
-        bodyTemplate: ac.bodyTemplate as Record<string, any>,
-        isActive: ac.isActive,
+        body_template: ac.bodyTemplate as Record<string, any>,
+        is_active: ac.isActive,
       })),
     );
 
@@ -220,8 +220,8 @@ export class ChatService {
         endpoint: ac.endpoint,
         method: ac.method,
         headers: ac.headers as Record<string, string>,
-        bodyTemplate: ac.bodyTemplate as Record<string, any>,
-        isActive: ac.isActive,
+        body_template: ac.bodyTemplate as Record<string, any>,
+        is_active: ac.isActive,
       })),
     );
 
