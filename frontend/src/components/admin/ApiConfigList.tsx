@@ -166,12 +166,27 @@ export default function ApiConfigList({ configs, onCreate, onUpdate, onDelete }:
         <p className="text-xs font-medium text-bc-text-dark mb-2">Test API Reference (Cuti API)</p>
         <div className="text-xs text-bc-text-muted space-y-1">
           <p>Isi form dengan nilai berikut untuk test:</p>
-          <div className="mt-2 space-y-1 font-mono text-[11px]">
-            <p><span className="text-bc-text-secondary">Name:</span> Leave Balance API</p>
-            <p><span className="text-bc-text-secondary">Endpoint:</span> http://localhost:8090/api/leave/balance</p>
-            <p><span className="text-bc-text-secondary">Method:</span> POST</p>
-            <p><span className="text-bc-text-secondary">Headers:</span> {'{"Content-Type": "application/json"}'}</p>
-            <p><span className="text-bc-text-secondary">Body:</span> {'{"emp_id": "{{extract:\\w+\\d+|\\d+}}"}'}</p>
+          <div className="mt-2 space-y-1.5 text-[11px]">
+            <div>
+              <span className="text-bc-text-secondary font-medium">Name:</span>
+              <span className="ml-1">Leave Balance API</span>
+            </div>
+            <div>
+              <span className="text-bc-text-secondary font-medium">Endpoint:</span>
+              <code className="ml-1 text-bc-primary">http://localhost:8090/api/leave/balance</code>
+            </div>
+            <div>
+              <span className="text-bc-text-secondary font-medium">Method:</span>
+              <span className="ml-1">POST</span>
+            </div>
+            <div>
+              <span className="text-bc-text-secondary font-medium">Headers:</span>
+              <pre className="mt-1 rounded bg-bc-bg-dark px-3 py-1.5 font-mono text-bc-primary overflow-x-auto">{'{\n  "Content-Type": "application/json"\n}'}</pre>
+            </div>
+            <div>
+              <span className="text-bc-text-secondary font-medium">Body Template:</span>
+              <pre className="mt-1 rounded bg-bc-bg-dark px-3 py-1.5 font-mono text-bc-primary overflow-x-auto">{'{\n  "emp_id": "{{extract:\\\\w+\\\\d+|\\\\d+}}"\n}'}</pre>
+            </div>
           </div>
           <p className="mt-2">Test dengan chat: <code className="text-bc-primary">sisa cuti EMP001</code></p>
           <p>Karyawan tersedia: <code className="text-bc-primary">EMP001</code>, <code className="text-bc-primary">EMP002</code>, <code className="text-bc-primary">EMP003</code></p>
@@ -257,6 +272,7 @@ function ApiForm({
           <textarea
             value={form.bodyTemplate}
             onChange={(e) => setForm({ ...form, bodyTemplate: e.target.value })}
+            placeholder={'{\n  "emp_id": "{{extract:\\\\w+\\\\d+|\\\\d+}}"\n}'}
             rows={3}
             className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-xs text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary font-mono"
           />
