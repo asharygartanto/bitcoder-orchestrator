@@ -170,8 +170,8 @@ export default function ApiConfigList({ configs, onCreate, onUpdate, onDelete }:
             <p><span className="text-bc-text-secondary">Name:</span> Leave Balance API</p>
             <p><span className="text-bc-text-secondary">Endpoint:</span> http://localhost:8090/api/leave/balance</p>
             <p><span className="text-bc-text-secondary">Method:</span> POST</p>
-            <p><span className="text-bc-text-secondary">Headers:</span> {"{"}"Content-Type": "application/json"{"}"}</p>
-            <p><span className="text-bc-text-secondary">Body:</span> {"{"}"emp_id": "{{`{{extract:\\w+\\d+|\\d+}}`}}"{"}"}</p>
+            <p><span className="text-bc-text-secondary">Headers:</span> {'{"Content-Type": "application/json"}'}</p>
+            <p><span className="text-bc-text-secondary">Body:</span> {'{"emp_id": "{{extract:\\w+\\d+|\\d+}}"}'}</p>
           </div>
           <p className="mt-2">Test dengan chat: <code className="text-bc-primary">sisa cuti EMP001</code></p>
           <p>Karyawan tersedia: <code className="text-bc-primary">EMP001</code>, <code className="text-bc-primary">EMP002</code>, <code className="text-bc-primary">EMP003</code></p>
