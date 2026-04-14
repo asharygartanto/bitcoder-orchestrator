@@ -36,11 +36,11 @@ class RAGPipeline:
                 context_parts.append(f"[Dokumen: {doc_name}]\n{content}")
 
         if api_results:
-            context_parts.append("## Data dari API")
+            context_parts.append("## Data dari API (WAJIB gunakan data ini untuk menjawab)")
             for api_result in api_results:
                 api_name = api_result.get("api_name", "Unknown API")
                 data = api_result.get("data", {})
-                context_parts.append(f"[API: {api_name}]\n{data}")
+                context_parts.append(f"[API: {api_name}]\n{json.dumps(data, indent=2, ensure_ascii=False)}")
 
         context_text = "\n\n".join(context_parts)
 
