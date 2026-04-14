@@ -225,6 +225,7 @@ class RAGPipeline:
         }
 
     async def generate_stream(self, query: str, sources: list[dict], api_results: Optional[list[dict]] = None) -> AsyncIterator[str]:
+        print(f"[GEN-DEBUG] api_results: {api_results}", flush=True)
         context_chunks = [
             {"document_name": s["document_name"], "content": s["content"]}
             for s in sources
