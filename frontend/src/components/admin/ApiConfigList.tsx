@@ -17,13 +17,13 @@ export default function ApiConfigList({ configs, onCreate, onUpdate, onDelete }:
     name: '',
     description: '',
     endpoint: '',
-    method: 'GET' as ApiConfig['method'],
-    headers: '{}',
+    method: 'POST' as ApiConfig['method'],
+    headers: '{"Content-Type": "application/json"}',
     bodyTemplate: '{}',
   });
 
   const resetForm = () => {
-    setForm({ name: '', description: '', endpoint: '', method: 'GET', headers: '{}', bodyTemplate: '{}' });
+    setForm({ name: '', description: '', endpoint: '', method: 'POST', headers: '{"Content-Type": "application/json"}', bodyTemplate: '{}' });
   };
 
   const handleCreate = () => {
@@ -163,19 +163,19 @@ export default function ApiConfigList({ configs, onCreate, onUpdate, onDelete }:
       )}
 
       <div className="rounded-xl border border-bc-border bg-bc-bg-muted/50 p-4">
-        <p className="text-xs font-medium text-bc-text-muted mb-2">Test API Reference</p>
-        <p className="text-xs text-bc-text-muted">
-          For testing, use the built-in Cuti API:
-        </p>
-        <code className="mt-1 block rounded-lg bg-bc-bg-dark px-3 py-2 text-xs text-bc-primary">
-          http://localhost:8090/api/leave/balance
-        </code>
-        <p className="mt-2 text-xs text-bc-text-muted">
-          Method: <span className="text-bc-text-secondary">POST</span> · Body: <code className="text-bc-primary">{'{"emp_id": "EMP001"}'}</code>
-        </p>
-        <p className="mt-1 text-xs text-bc-text-muted">
-          Or GET with query: <code className="text-bc-primary">?emp_id=EMP001</code>
-        </p>
+        <p className="text-xs font-medium text-bc-text-dark mb-2">Test API Reference (Cuti API)</p>
+        <div className="text-xs text-bc-text-muted space-y-1">
+          <p>Isi form dengan nilai berikut untuk test:</p>
+          <div className="mt-2 space-y-1 font-mono text-[11px]">
+            <p><span className="text-bc-text-secondary">Name:</span> Leave Balance API</p>
+            <p><span className="text-bc-text-secondary">Endpoint:</span> http://localhost:8090/api/leave/balance</p>
+            <p><span className="text-bc-text-secondary">Method:</span> POST</p>
+            <p><span className="text-bc-text-secondary">Headers:</span> {"{"}"Content-Type": "application/json"{"}"}</p>
+            <p><span className="text-bc-text-secondary">Body:</span> {"{"}"emp_id": "{{`{{extract:\\w+\\d+|\\d+}}`}}"{"}"}</p>
+          </div>
+          <p className="mt-2">Test dengan chat: <code className="text-bc-primary">sisa cuti EMP001</code></p>
+          <p>Karyawan tersedia: <code className="text-bc-primary">EMP001</code>, <code className="text-bc-primary">EMP002</code>, <code className="text-bc-primary">EMP003</code></p>
+        </div>
       </div>
     </div>
   );
@@ -197,48 +197,77 @@ function ApiForm({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <input
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="API Name (e.g. Leave Balance API)"
-          className="col-span-2 rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
-        />
-        <input
-          value={form.endpoint}
-          onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
-          placeholder="Endpoint URL"
-          className="col-span-2 rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
-        />
-        <select
-          value={form.method}
-          onChange={(e) => setForm({ ...form, method: e.target.value })}
-          className="rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark outline-none focus:border-bc-primary"
-        >
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="PATCH">PATCH</option>
-        </select>
-        <input
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Description (optional)"
-          className="rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
-        />
-        <textarea
-          value={form.headers}
-          onChange={(e) => setForm({ ...form, headers: e.target.value })}
-          placeholder='Headers JSON (e.g. {"Authorization": "Bearer ..."}'
-          rows={2}
-          className="col-span-2 rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-xs text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary font-mono"
-        />
-        <textarea
-          value={form.bodyTemplate}
-          onChange={(e) => setForm({ ...form, bodyTemplate: e.target.value })}
-          placeholder='Body Template JSON (e.g. {"emp_id": "EMP001"}'
-          rows={3}
-          className="col-span-2 rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-xs text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary font-mono"
-        />
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">
+            API Name <span className="text-red-400">*</span>
+          </label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="e.g. Leave Balance API"
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">
+            Endpoint URL <span className="text-red-400">*</span>
+          </label>
+          <input
+            value={form.endpoint}
+            onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
+            placeholder="e.g. http://localhost:8090/api/leave/balance"
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
+          />
+          <p className="mt-1 text-[10px] text-bc-text-muted">URL lengkap endpoint API (wajib pakai http:// atau https://)</p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">Method</label>
+          <select
+            value={form.method}
+            onChange={(e) => setForm({ ...form, method: e.target.value })}
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark outline-none focus:border-bc-primary"
+          >
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">Description</label>
+          <input
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="e.g. Cek saldo cuti karyawan"
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-sm text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary"
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">Headers (JSON)</label>
+          <textarea
+            value={form.headers}
+            onChange={(e) => setForm({ ...form, headers: e.target.value })}
+            rows={2}
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-xs text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary font-mono"
+          />
+          <p className="mt-1 text-[10px] text-bc-text-muted">Default: {"{"}"Content-Type": "application/json"{"}"}</p>
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-bc-text-dark mb-1 block">Body Template (JSON)</label>
+          <textarea
+            value={form.bodyTemplate}
+            onChange={(e) => setForm({ ...form, bodyTemplate: e.target.value })}
+            rows={3}
+            className="w-full rounded-lg border border-bc-border bg-bc-bg-dark px-3 py-2 text-xs text-bc-text-dark placeholder-bc-text-muted outline-none focus:border-bc-primary font-mono"
+          />
+          <div className="mt-1 text-[10px] text-bc-text-muted space-y-0.5">
+            <p>Template variables:</p>
+            <p>• <code className="text-bc-primary">{"{{query}}"}</code> — teks pertanyaan user lengkap</p>
+            <p>• <code className="text-bc-primary">{"{{extract:PATTERN}}"}</code> — extract ID dari query pakai regex</p>
+            <p>Contoh: <code className="text-bc-primary">{'{"emp_id": "{{extract:\\w+\\d+|\\d+}}"}'}</code></p>
+            <p>Akan extract ID dari: "sisa cuti EMP001" → EMP001, "cuti CN00295" → CN00295, "cuti 00001" → 00001</p>
+          </div>
+        </div>
       </div>
       <div className="flex gap-2">
         <button

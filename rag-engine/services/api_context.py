@@ -1,11 +1,29 @@
 import httpx
 import json
+import re
 from typing import Optional
 
 
 class ApiContextService:
     def __init__(self):
         self.timeout = 30.0
+
+    def _resolve_template(self, template: any, query: str) -> any:
+        if isinstance(template, str):
+            template = template.replace("{{query}}", query)
+            for match in re.finditer(r"\{\{extract:(.+?)\}\}", template):
+                pattern = match.group(1)
+                found = re.search(pattern, query)
+                if found:
+                    template = template.replace(match.group(0), found.group(1) if found.lastindex else found.group(0))
+                else:
+                    template = template.replace(match.group(0), "")
+            return template
+        elif isinstance(template, dict):
+            return {k: self._resolve_template(v, query) for k, v in template.items()}
+        elif isinstance(template, list):
+            return [self._resolve_template(v, query) for v in template]
+        return template
 
     async def call_api(self, api_config: dict) -> Optional[dict]:
         method = api_config.get("method", "GET").upper()
@@ -62,9 +80,7 @@ class ApiContextService:
 
             body_template = config.get("body_template")
             if body_template and query:
-                body_str = json.dumps(body_template)
-                body_str = body_str.replace("{{query}}", query)
-                config = {**config, "body_template": json.loads(body_str)}
+                config = {**config, "body_template": self._resolve_template(body_template, query)}
 
             result = await self.call_api(config)
             if result:

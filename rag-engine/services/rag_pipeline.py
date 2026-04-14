@@ -50,7 +50,9 @@ class RAGPipeline:
             "Gunakan informasi dari dokumen referensi dan data API yang tersedia. "
             "Jika informasi tidak tersedia dalam konteks, katakan dengan jujur bahwa kamu tidak memiliki informasi tersebut. "
             "JANGAN menyertakan daftar referensi atau sumber di akhir jawabanmu. "
-            "JANGAN menyebutkan nama file dokumen di jawabanmu.\n\n"
+            "JANGAN menyebutkan nama file dokumen di jawabanmu. "
+            "WAJIB gunakan data dari API jika tersedia dan relevan dengan pertanyaan. "
+            "Tampilkan angka dan data spesifik dari API dalam jawabanmu.\n\n"
             f"### Konteks:\n{context_text}"
         )
 
