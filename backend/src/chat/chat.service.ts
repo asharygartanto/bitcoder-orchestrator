@@ -209,10 +209,21 @@ export class ChatService {
 
     const contexts = await this.prisma.context.findMany({
       where: { organizationId, isActive: true },
+      include: { apiConfigs: { where: { isActive: true } } },
     });
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
     let topSources: any[] = [];
+    const allApiConfigs = contexts.flatMap((ctx) =>
+      ctx.apiConfigs.map((ac) => ({
+        name: ac.name,
+        endpoint: ac.endpoint,
+        method: ac.method,
+        headers: ac.headers as Record<string, string>,
+        bodyTemplate: ac.bodyTemplate as Record<string, any>,
+        isActive: ac.isActive,
+      })),
+    );
 
     if (contexts.length > 0) {
       const contextIds = contexts.map((ctx) => ctx.id);
@@ -226,6 +237,22 @@ export class ChatService {
           }),
         );
         topSources = searchData?.sources || [];
+      } catch {}
+    }
+
+    let apiResults: any[] = [];
+    if (allApiConfigs.length > 0) {
+      try {
+        const { data: apiData } = await firstValueFrom(
+          this.httpService.post(`${ragUrl}/api/query`, {
+            query: content,
+            context_id: contexts[0].id,
+            organization_id: organizationId,
+            top_k: 1,
+            api_configs: allApiConfigs,
+          }),
+        );
+        apiResults = apiData?.api_results || [];
       } catch {}
     }
 
@@ -262,7 +289,11 @@ export class ChatService {
       const ragResponse = await fetch(`${ragUrl}/api/query/generate/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: content, sources: topSources }),
+        body: JSON.stringify({
+          query: content,
+          sources: topSources,
+          api_results: apiResults.length > 0 ? apiResults : undefined,
+        }),
       });
 
       const reader = (ragResponse as any).body.getReader();
