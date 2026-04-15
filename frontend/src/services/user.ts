@@ -25,28 +25,38 @@ export async function createUser(dto: {
   name: string;
   password?: string;
   role?: string;
-}): Promise<any> {
-  const { data } = await api.post('/api/users', dto);
+}, orgId?: string): Promise<any> {
+  const { data } = await api.post('/api/users', dto, {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
   return data;
 }
 
-export async function bulkCreateUsers(users: { email: string; name: string; role?: string }[]): Promise<any[]> {
-  const { data } = await api.post('/api/users/bulk', { users });
+export async function bulkCreateUsers(users: { email: string; name: string; role?: string }[], orgId?: string): Promise<any[]> {
+  const { data } = await api.post('/api/users/bulk', { users }, {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
   return data;
 }
 
-export async function updateUser(id: string, dto: { name?: string; role?: string; isActive?: boolean; departmentId?: string; position?: string }): Promise<any> {
-  const { data } = await api.patch(`/api/users/${id}`, dto);
+export async function updateUser(id: string, dto: { name?: string; role?: string; isActive?: boolean; departmentId?: string; position?: string }, orgId?: string): Promise<any> {
+  const { data } = await api.patch(`/api/users/${id}`, dto, {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
   return data;
 }
 
-export async function resetUserPassword(id: string): Promise<{ success: boolean; generatedPassword?: string }> {
-  const { data } = await api.post(`/api/users/${id}/reset-password`);
+export async function resetUserPassword(id: string, orgId?: string): Promise<{ success: boolean; generatedPassword?: string }> {
+  const { data } = await api.post(`/api/users/${id}/reset-password`, {}, {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
   return data;
 }
 
-export async function deleteUser(id: string): Promise<void> {
-  await api.delete(`/api/users/${id}`);
+export async function deleteUser(id: string, orgId?: string): Promise<void> {
+  await api.delete(`/api/users/${id}`, {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
 }
 
 export async function forgotPassword(email: string): Promise<{ success: boolean }> {

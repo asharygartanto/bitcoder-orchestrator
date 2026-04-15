@@ -65,14 +65,16 @@ export class UserController {
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async create(@Body() dto: CreateUserDto, @Req() req: any) {
-    return this.userService.create(req.user.organizationId, dto, req.user.role);
+  async create(@Body() dto: CreateUserDto, @Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.create(orgId, dto, req.user.role);
   }
 
   @Post('bulk')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async bulkCreate(@Body() dto: BulkCreateUsersDto, @Req() req: any) {
-    return this.userService.bulkCreate(req.user.organizationId, dto, req.user.role);
+  async bulkCreate(@Body() dto: BulkCreateUsersDto, @Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.bulkCreate(orgId, dto, req.user.role);
   }
 
   @Get(':id')
@@ -82,20 +84,23 @@ export class UserController {
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async update(@Param('id') id: string, @Body() dto: UpdateUserDto, @Req() req: any) {
-    return this.userService.update(id, req.user.organizationId, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateUserDto, @Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.update(id, orgId, dto);
   }
 
   @Post(':id/reset-password')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async resetPassword(@Param('id') id: string, @Req() req: any) {
-    return this.userService.resetUserPassword(id, req.user.organizationId);
+  async resetPassword(@Param('id') id: string, @Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.resetUserPassword(id, orgId);
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async remove(@Param('id') id: string, @Req() req: any) {
-    return this.userService.remove(id, req.user.organizationId);
+  async remove(@Param('id') id: string, @Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.remove(id, orgId);
   }
 }
 

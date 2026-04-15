@@ -41,25 +41,32 @@ export default function DepartmentsPage() {
   const loadData = async (orgId?: string) => {
     try {
       const fetchOrgId = isSuperAdmin ? orgId || selectedOrgId : undefined;
-      const [depts, usrs, cls] = await Promise.all([
+      const [depts, usrs] = await Promise.all([
         getDepartments(fetchOrgId),
         getUsers(fetchOrgId),
-        isSuperAdmin ? getClients() : Promise.resolve([]),
       ]);
       setDepartments(depts);
       setUsers(usrs);
-      if (isSuperAdmin) setClients(cls);
     } catch {} finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isSuperAdmin && clients.length > 0 && !selectedOrgId) {
-      const firstOrgId = clients[0].organizationId;
-      setSelectedOrgId(firstOrgId);
-      loadData(firstOrgId);
-    } else if (!isSuperAdmin) {
+    if (isSuperAdmin) {
+      getClients()
+        .then((cls) => {
+          setClients(cls);
+          if (cls.length > 0) {
+            const firstOrgId = cls[0].organizationId;
+            setSelectedOrgId(firstOrgId);
+            loadData(firstOrgId);
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch(() => setLoading(false));
+    } else {
       loadData();
     }
   }, [isSuperAdmin]);
