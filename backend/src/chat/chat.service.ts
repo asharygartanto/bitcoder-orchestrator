@@ -135,7 +135,7 @@ export class ChatService {
         const topSources: any[] = searchData?.sources || [];
 
     if (topSources.length === 0) {
-      const noAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
+      const noAnswer = 'Maaf, saya tidak memiliki informasi mengenai topik yang Anda tanyakan. Silakan ajukan pertanyaan lain yang terkait dengan data atau dokumen yang tersedia.';
       const assistantMessage = await this.prisma.chatMessage.create({
         data: { sessionId, role: 'ASSISTANT', content: noAnswer, references: { sources: [] } },
       });
@@ -259,7 +259,7 @@ export class ChatService {
     res.setHeader('X-Accel-Buffering', 'no');
 
     if (topSources.length === 0) {
-      const noAnswer = 'Maaf, saya tidak menemukan jawaban yang relevan dari dokumen yang tersedia.';
+      const noAnswer = 'Maaf, saya tidak memiliki informasi mengenai topik yang Anda tanyakan. Silakan ajukan pertanyaan lain yang terkait dengan data atau dokumen yang tersedia.';
       res.write(`data: ${JSON.stringify({ type: 'metadata', sources: [], context_used: 0 })}\n\n`);
       res.write(`data: ${noAnswer}\n\n`);
       res.write('data: [DONE]\n\n');
@@ -300,7 +300,7 @@ export class ChatService {
       }
       res.write('data: [DONE]\n\n');
     } catch {
-      fullAnswer = fullAnswer || 'Maaf, terjadi kesalahan saat memproses jawaban.';
+      fullAnswer = fullAnswer || 'Maaf, terjadi kesalahan saat memproses jawaban. Silakan coba lagi.';
       res.write(`data: ${fullAnswer}\n\n`);
       res.write('data: [DONE]\n\n');
     }
