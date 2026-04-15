@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class CreateDepartmentDto {
   @IsString()
@@ -14,7 +14,7 @@ export class CreateDepartmentDto {
   parentId?: string;
 
   @IsOptional()
-  @IsString()
+  @IsNumber()
   level?: number;
 }
 
