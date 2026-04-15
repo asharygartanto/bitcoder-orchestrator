@@ -36,7 +36,11 @@ function getCrawlLabel(source: SourceReference): string {
 export default function ChatMessage({ message, isStreaming }: Props) {
   const isUser = message.role === 'USER';
   const references = message.references;
-  const rawSources = !isUser && references?.sources ? references.sources : [];
+  const isNoInfo = !isUser && (
+    message.content.includes('tidak memiliki informasi') ||
+    message.content.includes('tidak menemukan')
+  );
+  const rawSources = !isUser && !isNoInfo && references?.sources ? references.sources : [];
   const sources = Array.from(
     new Map(rawSources.map((s) => [s.document_id || s.source_url || s.document_name, s])).values(),
   ).slice(0, 1);
