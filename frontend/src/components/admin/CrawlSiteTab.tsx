@@ -39,7 +39,7 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
   const loadCrawledDocs = async () => {
     try {
       const docs = await getDocumentsByContext(contextId);
-      setCrawledDocs(docs.filter((d) => d.name.includes('[CRAWL]')));
+      setCrawledDocs(docs.filter((d) => d.name.includes('[CRAWL]') || d.id.startsWith('crawl_')));
     } catch {}
   };
 

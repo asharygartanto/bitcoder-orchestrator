@@ -28,7 +28,9 @@ export class ContextService {
 
     return contexts.map((ctx) => {
       const { documents, ...rest } = ctx;
-      const crawlCount = documents.filter((d) => d.name.includes('[CRAWL]')).length;
+      const crawlCount = documents.filter(
+        (d) => d.name.includes('[CRAWL]') || d.id.startsWith('crawl_'),
+      ).length;
       const docCount = documents.length - crawlCount;
       return {
         ...rest,
