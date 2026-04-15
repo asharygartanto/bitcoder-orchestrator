@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useChatStore } from '../stores/chat.store';
 import {
   getSessions,
@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [streamingContent, setStreamingContent] = useState('');
   const [streamingSources, setStreamingSources] = useState<SourceReference[]>([]);
   const [streamingSessionId, setStreamingSessionId] = useState<string | null>(null);
+  const activeStreamIdRef = useRef<string | null>(null);
 
   const isCurrentSending = isSending && streamingSessionId === activeSession?.id;
 
@@ -96,6 +97,7 @@ export default function ChatPage() {
     addMessage(userMsg);
     setSending(true);
     setStreamingSessionId(sessionId);
+    activeStreamIdRef.current = sessionId;
     setStreamingContent('');
     setStreamingSources([]);
 
@@ -107,12 +109,12 @@ export default function ChatPage() {
         sessionId,
         content,
         (chunk) => {
-          if (streamingSessionId !== sessionId) return;
+          if (activeStreamIdRef.current !== sessionId) return;
           fullContent += chunk;
           setStreamingContent(fullContent);
         },
         (meta) => {
-          if (streamingSessionId !== sessionId) return;
+          if (activeStreamIdRef.current !== sessionId) return;
           sources = meta;
           setStreamingSources(meta);
         },
@@ -122,7 +124,7 @@ export default function ChatPage() {
       fullContent = fullContent || 'Sorry, an error occurred. Please try again.';
     }
 
-    if (streamingSessionId === sessionId) {
+    if (activeStreamIdRef.current === sessionId) {
       const assistantMsg: ChatMessage = {
         id: `stream-${Date.now()}`,
         sessionId,
@@ -134,6 +136,7 @@ export default function ChatPage() {
       addMessage(assistantMsg);
       setSending(false);
       setStreamingSessionId(null);
+      activeStreamIdRef.current = null;
       setStreamingContent('');
       setStreamingSources([]);
     }

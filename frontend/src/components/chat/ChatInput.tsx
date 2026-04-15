@@ -45,7 +45,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             rows={1}
-            className="flex-1 resize-none bg-transparent text-sm text-bc-text-dark placeholder-bc-text-muted outline-none max-h-[200px] leading-6"
+            className="flex-1 resize-none bg-transparent text-sm text-bc-text-dark placeholder-bc-text-muted outline-none max-h-[200px] leading-6 min-h-[40px]"
             disabled={disabled}
           />
           <button
