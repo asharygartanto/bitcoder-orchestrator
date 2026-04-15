@@ -12,6 +12,7 @@ import UsersPage from './pages/UsersPage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import MonitoringPage from './pages/MonitoringPage';
 import LicensesPage from './pages/LicensesPage';
+import DepartmentsPage from './pages/DepartmentsPage';;
 import AppLayout from './components/layout/AppLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -110,6 +111,16 @@ export default function App() {
                 <MonitoringPage />
               </AppLayout>
             </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/departments"
+          element={
+            <AdminRoute>
+              <AppLayout>
+                <DepartmentsPage />
+              </AppLayout>
+            </AdminRoute>
           }
         />
         <Route

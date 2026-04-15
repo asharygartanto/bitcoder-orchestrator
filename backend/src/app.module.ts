@@ -16,6 +16,7 @@ import { EmailModule } from './email/email.module';
 import { ApiKeyModule } from './api-key/api-key.module';
 import { NewsCrawlModule } from './news-crawl/news-crawl.module';
 import { LicenseModule } from './license/license.module';
+import { DepartmentModule } from './department/department.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
@@ -37,6 +38,7 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     ApiKeyModule,
     NewsCrawlModule,
     LicenseModule,
+    DepartmentModule,
   ],
 })
 export class AppModule {

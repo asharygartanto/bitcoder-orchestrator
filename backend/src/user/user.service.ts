@@ -33,6 +33,8 @@ export class UserService {
         isActive: true,
         createdAt: true,
         lastLoginAt: true,
+        position: true,
+        department: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -124,6 +126,8 @@ export class UserService {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.role !== undefined && { role: dto.role as any }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.departmentId !== undefined && { departmentId: dto.departmentId || null }),
+        ...(dto.position !== undefined && { position: dto.position }),
       },
       select: {
         id: true,
@@ -132,6 +136,8 @@ export class UserService {
         role: true,
         isActive: true,
         createdAt: true,
+        position: true,
+        department: { select: { id: true, name: true } },
       },
     });
   }

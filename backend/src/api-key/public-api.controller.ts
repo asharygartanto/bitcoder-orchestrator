@@ -8,7 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
-  Sse,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiKeyGuard } from '../api-key/api-key.guard';
@@ -17,6 +17,7 @@ import { RagService } from '../rag/rag.service';
 import { ApiConfigService } from '../api-config/api-config.service';
 import { AuthService } from '../auth/auth.service';
 import { ChatService } from '../chat/chat.service';
+import { DepartmentService } from '../department/department.service';
 import * as bcrypt from 'bcrypt';
 
 @Controller('public')
@@ -28,6 +29,7 @@ export class PublicApiController {
     private apiConfigService: ApiConfigService,
     private authService: AuthService,
     private chatService: ChatService,
+    private departmentService: DepartmentService,
   ) {}
 
   @Get('info')
@@ -90,6 +92,8 @@ export class PublicApiController {
         email: user.email,
         name: user.name,
         role: user.role,
+        departmentId: user.departmentId,
+        position: user.position,
       },
     };
   }
@@ -138,9 +142,20 @@ export class PublicApiController {
   @Post('chat')
   async chat(
     @Req() req: any,
-    @Body() body: { message: string; contextId?: string; sessionId?: string },
+    @Body() body: { message: string; contextId?: string; sessionId?: string; userId?: string },
   ) {
-    const { message, contextId, sessionId } = body;
+    if (body.userId) {
+      const caller = await this.prisma.user.findUnique({
+        where: { id: body.userId },
+        select: { id: true, departmentId: true, organizationId: true },
+      });
+
+      if (!caller || caller.organizationId !== req.apiKey.organizationId) {
+        throw new ForbiddenException('Access denied');
+      }
+    }
+
+    const { message, contextId } = body;
 
     const contexts = await this.prisma.context.findMany({
       where: {
@@ -161,15 +176,6 @@ export class PublicApiController {
     let bestScore = -1;
 
     for (const ctx of contexts) {
-      const apiConfigs = ctx.apiConfigs.map((ac) => ({
-        name: ac.name,
-        endpoint: ac.endpoint,
-        method: ac.method,
-        headers: ac.headers as Record<string, string>,
-        bodyTemplate: ac.bodyTemplate as Record<string, any>,
-        isActive: ac.isActive,
-      }));
-
       try {
         const result = await this.ragService.query(
           message,
@@ -199,6 +205,81 @@ export class PublicApiController {
       context_id: contextId || contexts[0]?.id,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('departments')
+  async getDepartments(@Req() req: any) {
+    return this.departmentService.findAll(req.apiKey.organizationId);
+  }
+
+  @Post('check-access')
+  async checkAccess(
+    @Req() req: any,
+    @Body() body: { userId: string; targetUserId: string },
+  ) {
+    const caller = await this.prisma.user.findUnique({
+      where: { id: body.userId },
+      select: { id: true, departmentId: true, organizationId: true },
+    });
+
+    const target = await this.prisma.user.findUnique({
+      where: { id: body.targetUserId },
+      select: { id: true, departmentId: true, organizationId: true },
+    });
+
+    if (!caller || !target) {
+      return { canAccess: false, reason: 'User not found' };
+    }
+
+    if (caller.organizationId !== req.apiKey.organizationId || target.organizationId !== req.apiKey.organizationId) {
+      return { canAccess: false, reason: 'Different organization' };
+    }
+
+    if (!caller.departmentId || !target.departmentId) {
+      return { canAccess: false, reason: 'User not assigned to department' };
+    }
+
+    const canAccess = await this.departmentService.canUserAccessDepartment(
+      caller.departmentId,
+      target.departmentId,
+      req.apiKey.organizationId,
+    );
+
+    return { canAccess };
+  }
+
+  @Get('department/:id/users')
+  async getDepartmentUsers(@Req() req: any, @Param('id') deptId: string) {
+    const dept = await this.prisma.department.findFirst({
+      where: { id: deptId, organizationId: req.apiKey.organizationId },
+    });
+
+    if (!dept) {
+      return { error: 'Department not found' };
+    }
+
+    const descendantIds = await this.departmentService.getDescendantIds(
+      deptId,
+      req.apiKey.organizationId,
+    );
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        organizationId: req.apiKey.organizationId,
+        departmentId: { in: descendantIds },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        position: true,
+        department: { select: { id: true, name: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return { departmentId: deptId, departmentName: dept.name, users };
   }
 
   @Post('chat/stream')

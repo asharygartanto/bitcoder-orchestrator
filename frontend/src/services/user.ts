@@ -9,6 +9,8 @@ export interface OrgUser {
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+  position?: string;
+  department?: { id: string; name: string } | null;
 }
 
 export async function getUsers(): Promise<OrgUser[]> {
@@ -31,7 +33,7 @@ export async function bulkCreateUsers(users: { email: string; name: string; role
   return data;
 }
 
-export async function updateUser(id: string, dto: { name?: string; role?: string; isActive?: boolean }): Promise<any> {
+export async function updateUser(id: string, dto: { name?: string; role?: string; isActive?: boolean; departmentId?: string; position?: string }): Promise<any> {
   const { data } = await api.patch(`/api/users/${id}`, dto);
   return data;
 }

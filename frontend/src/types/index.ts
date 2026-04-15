@@ -10,6 +10,8 @@ export interface User {
     name: string;
     slug: string;
   } | null;
+  departmentId?: string | null;
+  position?: string | null;
 }
 
 export interface Context {
@@ -154,6 +156,25 @@ export interface OrgUser {
   role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   isActive: boolean;
   createdAt: string;
+  position?: string;
+  department?: { id: string; name: string } | null;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  description: string | null;
+  organizationId: string;
+  parentId: string | null;
+  level: number;
+  createdAt: string;
+  updatedAt: string;
+  parent?: { id: string; name: string } | null;
+  children?: Department[];
+  _count?: {
+    users: number;
+    children: number;
+  };
 }
 
 export interface ClientBranding {

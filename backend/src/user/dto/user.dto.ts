@@ -41,6 +41,16 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   @IsOptional()
   isActive?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  position?: string;
 }
 
 export class ForgotPasswordDto {

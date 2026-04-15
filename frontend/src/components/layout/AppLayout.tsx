@@ -8,6 +8,7 @@ import {
   Users,
   Key,
   Activity,
+  Building2,
   Shield,
   LogOut,
   ChevronLeft,
@@ -117,6 +118,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
               icon={<Users size={20} />}
               label="Users"
               active={location.pathname === '/users'}
+              collapsed={sidebarCollapsed}
+              primaryColor={pc}
+            />
+          )}
+          {isAdmin && (
+            <NavLink
+              to="/departments"
+              icon={<Building2 size={20} />}
+              label="Struktur Org"
+              active={location.pathname === '/departments'}
               collapsed={sidebarCollapsed}
               primaryColor={pc}
             />
