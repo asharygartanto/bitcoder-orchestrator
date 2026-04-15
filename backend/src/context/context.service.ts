@@ -17,12 +17,27 @@ export class ContextService {
   }
 
   async findAll(organizationId: string) {
-    return this.prisma.context.findMany({
+    const contexts = await this.prisma.context.findMany({
       where: { organizationId },
       include: {
         _count: { select: { documents: true, apiConfigs: true } },
+        documents: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    return contexts.map((ctx) => {
+      const { documents, ...rest } = ctx;
+      const crawlCount = documents.filter((d) => d.name.includes('[CRAWL]')).length;
+      const docCount = documents.length - crawlCount;
+      return {
+        ...rest,
+        _count: {
+          documents: docCount,
+          apiConfigs: rest._count.apiConfigs,
+          crawls: crawlCount,
+        },
+      };
     });
   }
 

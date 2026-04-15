@@ -23,6 +23,7 @@ export interface Context {
   _count?: {
     documents: number;
     apiConfigs: number;
+    crawls: number;
   };
   documents?: Document[];
   apiConfigs?: ApiConfig[];

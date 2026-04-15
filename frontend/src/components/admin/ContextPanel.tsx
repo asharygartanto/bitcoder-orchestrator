@@ -17,7 +17,8 @@ import type { Document, ApiConfig, ProcessingStatus } from '../../types';
 import DocumentList from './DocumentList';
 import ApiConfigList from './ApiConfigList';
 import TestChatBox from './TestChatBox';
-import { Upload, Zap, MessageSquare, RefreshCw } from 'lucide-react';
+import CrawlSiteTab from './CrawlSiteTab';
+import { Upload, Zap, MessageSquare, RefreshCw, Globe } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
   onUpdate: () => void;
 }
 
-type Tab = 'documents' | 'apis' | 'test';
+type Tab = 'documents' | 'apis' | 'crawl' | 'test';
 
 export default function ContextPanel({ context, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('documents');
@@ -141,6 +142,7 @@ export default function ContextPanel({ context, onUpdate }: Props) {
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'documents', label: 'Documents', icon: <Upload size={16} /> },
     { key: 'apis', label: 'APIs', icon: <Zap size={16} /> },
+    { key: 'crawl', label: 'Crawl Site', icon: <Globe size={16} /> },
     { key: 'test', label: 'Test Chat', icon: <MessageSquare size={16} /> },
   ];
 
@@ -203,6 +205,9 @@ export default function ContextPanel({ context, onUpdate }: Props) {
         )}
         {tab === 'test' && (
           <TestChatBox contextId={context.id} />
+        )}
+        {tab === 'crawl' && (
+          <CrawlSiteTab contextId={context.id} onCrawlComplete={() => { loadData(); onUpdate(); }} />
         )}
       </div>
     </div>

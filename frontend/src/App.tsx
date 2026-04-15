@@ -11,7 +11,6 @@ import ClientsPage from './pages/ClientsPage';
 import UsersPage from './pages/UsersPage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import MonitoringPage from './pages/MonitoringPage';
-import NewsCrawlPage from './pages/NewsCrawlPage';
 import LicensesPage from './pages/LicensesPage';
 import AppLayout from './components/layout/AppLayout';
 
@@ -109,16 +108,6 @@ export default function App() {
             <SuperAdminRoute>
               <AppLayout>
                 <MonitoringPage />
-              </AppLayout>
-            </SuperAdminRoute>
-          }
-        />
-        <Route
-          path="/news-crawl"
-          element={
-            <SuperAdminRoute>
-              <AppLayout>
-                <NewsCrawlPage />
               </AppLayout>
             </SuperAdminRoute>
           }

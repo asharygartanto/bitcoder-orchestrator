@@ -115,7 +115,7 @@ export default function AdminPage() {
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium">{ctx.name}</p>
                   <p className="truncate text-xs text-bc-text-muted">
-                    {ctx._count?.documents || 0} docs · {ctx._count?.apiConfigs || 0} APIs
+                    {ctx._count?.documents || 0} docs · {ctx._count?.apiConfigs || 0} API · {ctx._count?.crawls || 0} crawl
                   </p>
                 </div>
                 <button

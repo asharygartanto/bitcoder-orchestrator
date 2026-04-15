@@ -8,7 +8,6 @@ import {
   Users,
   Key,
   Activity,
-  Globe,
   Shield,
   LogOut,
   ChevronLeft,
@@ -138,16 +137,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
               icon={<Activity size={20} />}
               label="Monitoring"
               active={location.pathname === '/monitoring'}
-              collapsed={sidebarCollapsed}
-              primaryColor={pc}
-            />
-          )}
-          {user?.role === 'SUPER_ADMIN' && (
-            <NavLink
-              to="/news-crawl"
-              icon={<Globe size={20} />}
-              label="Crawl Berita"
-              active={location.pathname === '/news-crawl'}
               collapsed={sidebarCollapsed}
               primaryColor={pc}
             />
