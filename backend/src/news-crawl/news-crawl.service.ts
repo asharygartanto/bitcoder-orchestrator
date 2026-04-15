@@ -84,7 +84,7 @@ export class NewsCrawlService {
     }
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
-    const documentName = `[CRAWL] ${dto.title || article.title}`;
+    const documentName = `[CRAWL] ${dto.url}`;
 
     await this.deleteExistingCrawl(dto.contextId, organizationId, dto.url, ragUrl);
 

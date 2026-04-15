@@ -91,6 +91,17 @@ async def process_document_background(
             embeddings=embeddings,
         )
 
+        if "[CRAWL]" in document_name:
+            import re
+            crawl_url = document_name.replace("[CRAWL]", "").strip()
+            if not crawl_url.startswith("http"):
+                url_match = re.search(r'Sumber:\s*(https?://\S+)', chunks[0]["content"] if chunks else "")
+                if url_match:
+                    crawl_url = url_match.group(1)
+            for chunk in chunks:
+                chunk["source_type"] = "crawl"
+                chunk["source_url"] = crawl_url
+
         logger.info(f"[{document_id}] Successfully processed {len(chunks)} chunks")
         _update_status(
             document_id, DocumentStatus.READY, "Complete", 100, len(chunks),
