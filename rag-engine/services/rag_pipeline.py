@@ -52,7 +52,8 @@ class RAGPipeline:
             "JANGAN menyertakan daftar referensi atau sumber di akhir jawabanmu. "
             "JANGAN menyebutkan nama file dokumen di jawabanmu. "
             "WAJIB gunakan data dari API jika tersedia dan relevan dengan pertanyaan. "
-            "Tampilkan angka dan data spesifik dari API dalam jawabanmu.\n\n"
+            "Tampilkan angka dan data spesifik dari API dalam jawabanmu. "
+            "JANGAN gunakan tabel markdown. Gunakan format teks biasa dengan bullet points.\n\n"
             f"### Konteks:\n{context_text}"
         )
 

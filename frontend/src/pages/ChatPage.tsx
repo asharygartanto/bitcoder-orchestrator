@@ -30,6 +30,9 @@ export default function ChatPage() {
 
   const [streamingContent, setStreamingContent] = useState('');
   const [streamingSources, setStreamingSources] = useState<SourceReference[]>([]);
+  const [streamingSessionId, setStreamingSessionId] = useState<string | null>(null);
+
+  const isCurrentSending = isSending && streamingSessionId === activeSession?.id;
 
   useEffect(() => {
     loadSessions();
@@ -92,6 +95,7 @@ export default function ChatPage() {
     };
     addMessage(userMsg);
     setSending(true);
+    setStreamingSessionId(sessionId);
     setStreamingContent('');
     setStreamingSources([]);
 
@@ -103,10 +107,12 @@ export default function ChatPage() {
         sessionId,
         content,
         (chunk) => {
+          if (streamingSessionId !== sessionId) return;
           fullContent += chunk;
           setStreamingContent(fullContent);
         },
         (meta) => {
+          if (streamingSessionId !== sessionId) return;
           sources = meta;
           setStreamingSources(meta);
         },
@@ -116,18 +122,21 @@ export default function ChatPage() {
       fullContent = fullContent || 'Sorry, an error occurred. Please try again.';
     }
 
-    const assistantMsg: ChatMessage = {
-      id: `stream-${Date.now()}`,
-      sessionId,
-      role: 'ASSISTANT',
-      content: fullContent,
-      references: sources.length > 0 ? { sources, api_results: null } : null,
-      createdAt: new Date().toISOString(),
-    };
-    addMessage(assistantMsg);
-    setSending(false);
-    setStreamingContent('');
-    setStreamingSources([]);
+    if (streamingSessionId === sessionId) {
+      const assistantMsg: ChatMessage = {
+        id: `stream-${Date.now()}`,
+        sessionId,
+        role: 'ASSISTANT',
+        content: fullContent,
+        references: sources.length > 0 ? { sources, api_results: null } : null,
+        createdAt: new Date().toISOString(),
+      };
+      addMessage(assistantMsg);
+      setSending(false);
+      setStreamingSessionId(null);
+      setStreamingContent('');
+      setStreamingSources([]);
+    }
   };
 
   return (
@@ -154,7 +163,7 @@ export default function ChatPage() {
       <div className="flex flex-1 flex-col">
         <ChatWindow
           messages={messages}
-          isSending={isSending}
+          isSending={isCurrentSending}
           streamingContent={streamingContent}
           streamingSources={streamingSources}
         />

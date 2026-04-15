@@ -37,7 +37,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
   return (
     <div className="border-t border-bc-border bg-bc-bg-subtle p-4">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-end gap-3 rounded-xl border border-bc-border bg-bc-bg-muted px-4 py-3 transition-all focus-within:border-bc-primary/30">
+        <div className="flex items-center gap-3 rounded-xl border border-bc-border bg-bc-bg-muted px-4 py-3 transition-all focus-within:border-bc-primary/30">
           <textarea
             ref={textareaRef}
             value={content}
@@ -45,18 +45,18 @@ export default function ChatInput({ onSend, disabled }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             rows={1}
-            className="flex-1 resize-none bg-transparent text-sm text-bc-text-dark placeholder-bc-text-muted outline-none max-h-[200px]"
+            className="flex-1 resize-none bg-transparent text-sm text-bc-text-dark placeholder-bc-text-muted outline-none max-h-[200px] leading-6"
             disabled={disabled}
           />
           <button
             onClick={handleSubmit}
             disabled={disabled || !content.trim()}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-bc-primary text-white transition-all hover:bg-bc-primary-dark disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-bc-primary text-white transition-all hover:bg-bc-primary-dark disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {disabled ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={18} className="animate-spin" />
             ) : (
-              <Send size={16} />
+              <Send size={18} />
             )}
           </button>
         </div>
