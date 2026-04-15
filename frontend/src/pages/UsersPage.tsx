@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useAuthStore } from '../stores/auth.store';
 import {
   getUsers,
   createUser,
@@ -8,6 +9,9 @@ import {
   deleteUser,
 } from '../services/user';
 import type { OrgUser } from '../services/user';
+import { getDepartments } from '../services/department';
+import { getClients } from '../services/client';
+import type { Department, Client } from '../types';
 import {
   Plus,
   Upload,
@@ -22,29 +26,69 @@ import {
   Clock,
   RefreshCw,
   FileDown,
+  Building2,
+  Briefcase,
+  Link2,
 } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function UsersPage() {
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.role === 'SUPER_ADMIN';
+
   const [users, setUsers] = useState<OrgUser[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
   const [generatedPw, setGeneratedPw] = useState<{ email: string; password: string } | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editDeptId, setEditDeptId] = useState('');
+  const [editPosition, setEditPosition] = useState('');
 
-  const loadUsers = async () => {
+  const activeOrgId = isSuperAdmin ? selectedOrgId : undefined;
+
+  const loadData = async (orgId?: string) => {
     try {
-      const data = await getUsers();
-      setUsers(data);
+      const fetchOrgId = isSuperAdmin ? orgId || selectedOrgId : undefined;
+      const [usrs, depts] = await Promise.all([
+        getUsers(fetchOrgId),
+        getDepartments(fetchOrgId),
+      ]);
+      setUsers(usrs);
+      setDepartments(depts);
     } catch {} finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (isSuperAdmin) {
+      getClients()
+        .then((cls) => {
+          setClients(cls);
+          if (cls.length > 0) {
+            const firstOrgId = cls[0].organizationId;
+            setSelectedOrgId(firstOrgId);
+            loadData(firstOrgId);
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch(() => setLoading(false));
+    } else {
+      loadData();
+    }
+  }, [isSuperAdmin]);
+
+  const handleClientChange = (orgId: string) => {
+    setSelectedOrgId(orgId);
+    setLoading(true);
+    loadData(orgId);
+  };
 
   const filtered = users.filter(
     (u) =>
@@ -55,15 +99,15 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Nonaktifkan user ini?')) return;
     try {
-      await deleteUser(id);
-      loadUsers();
+      await deleteUser(id, activeOrgId);
+      loadData(activeOrgId);
     } catch {}
   };
 
   const handleResetPw = async (id: string, email: string) => {
     if (!confirm(`Reset password untuk ${email}? Password baru akan dikirim ke email.`)) return;
     try {
-      const result = await resetUserPassword(id);
+      const result = await resetUserPassword(id, activeOrgId);
       if (result.generatedPassword) {
         setGeneratedPw({ email, password: result.generatedPassword });
       } else {
@@ -74,10 +118,29 @@ export default function UsersPage() {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await updateUser(id, { isActive: !isActive });
-      loadUsers();
+      await updateUser(id, { isActive: !isActive }, activeOrgId);
+      loadData(activeOrgId);
     } catch {}
   };
+
+  const startEditDept = (u: OrgUser) => {
+    setEditingUserId(u.id);
+    setEditDeptId(u.department?.id || '');
+    setEditPosition(u.position || '');
+  };
+
+  const saveEditDept = async (userId: string) => {
+    try {
+      await updateUser(userId, {
+        departmentId: editDeptId || '',
+        position: editPosition || '',
+      }, activeOrgId);
+      setEditingUserId(null);
+      loadData(activeOrgId);
+    } catch {}
+  };
+
+  const selectedClient = clients.find((c) => c.organizationId === selectedOrgId);
 
   const downloadTemplate = () => {
     const csv = 'email,name,role\njohn@company.com,John Doe,USER\njane@company.com,Jane Smith,ADMIN\n';
@@ -95,11 +158,29 @@ export default function UsersPage() {
       <div className="flex items-center justify-between border-b border-bc-border px-6 py-4">
         <div>
           <h1 className="text-lg font-bold text-bc-text-dark">Manajemen User</h1>
-          <p className="text-xs text-bc-text-muted mt-0.5">{users.length} user terdaftar</p>
+          <p className="text-xs text-bc-text-muted mt-0.5">
+            {users.length} user terdaftar
+            {selectedClient && (
+              <span className="ml-2 inline-flex items-center gap-1 text-bc-primary">
+                <Link2 size={10} /> {selectedClient.name}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {isSuperAdmin && clients.length > 0 && (
+            <select
+              value={selectedOrgId || ''}
+              onChange={(e) => handleClientChange(e.target.value)}
+              className="rounded-lg border border-bc-border bg-white px-3 py-1.5 text-xs outline-none focus:border-bc-primary"
+            >
+              {clients.map((c) => (
+                <option key={c.id} value={c.organizationId}>{c.name}</option>
+              ))}
+            </select>
+          )}
           <button
-            onClick={loadUsers}
+            onClick={() => loadData(activeOrgId)}
             className="rounded-lg p-2 text-bc-text-muted hover:bg-bc-bg-muted transition-colors"
             title="Refresh"
           >
@@ -128,8 +209,8 @@ export default function UsersPage() {
 
       {(showAdd || showBulk) && (
         <div className="border-b border-bc-border px-6 py-4 bg-bc-bg-subtle">
-          {showAdd && <AddUserForm onDone={(result) => { setShowAdd(false); loadUsers(); if (result?.generatedPassword) setGeneratedPw({ email: result.email, password: result.generatedPassword }); }} />}
-          {showBulk && <BulkUploadForm onDone={() => { setShowBulk(false); loadUsers(); }} />}
+          {showAdd && <AddUserForm orgId={activeOrgId} onDone={(result) => { setShowAdd(false); loadData(activeOrgId); if (result?.generatedPassword) setGeneratedPw({ email: result.email, password: result.generatedPassword }); }} />}
+          {showBulk && <BulkUploadForm orgId={activeOrgId} onDone={() => { setShowBulk(false); loadData(activeOrgId); }} />}
         </div>
       )}
 
@@ -172,62 +253,115 @@ export default function UsersPage() {
               <tr className="text-left text-xs text-bc-text-muted">
                 <th className="px-6 py-2.5 font-medium">User</th>
                 <th className="px-4 py-2.5 font-medium">Role</th>
+                <th className="px-4 py-2.5 font-medium">Department</th>
+                <th className="px-4 py-2.5 font-medium">Position</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Login Terakhir</th>
                 <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-bc-border">
-              {filtered.map((user) => (
-                <tr key={user.id} className="hover:bg-bc-bg-subtle/50 transition-colors">
+              {filtered.map((u) => (
+                <tr key={u.id} className="hover:bg-bc-bg-subtle/50 transition-colors">
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bc-primary/10 text-bc-primary text-xs font-medium">
-                        {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
+                        {u.name?.[0]?.toUpperCase() || u.email[0]?.toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-bc-text-dark truncate">{user.name || '-'}</p>
-                        <p className="text-xs text-bc-text-muted truncate">{user.email}</p>
+                        <p className="text-sm font-medium text-bc-text-dark truncate">{u.name || '-'}</p>
+                        <p className="text-xs text-bc-text-muted truncate">{u.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={clsx(
                       'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                      user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
-                      user.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' :
+                      u.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                      u.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' :
                       'bg-gray-100 text-gray-600',
                     )}>
-                      {user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.role === 'ADMIN' ? 'Admin' : 'User'}
+                      {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
+                    {editingUserId === u.id ? (
+                      <select
+                        value={editDeptId}
+                        onChange={(e) => setEditDeptId(e.target.value)}
+                        className="rounded border border-bc-primary bg-white px-2 py-1 text-xs outline-none"
+                        autoFocus
+                      >
+                        <option value="">-- Tanpa Dept --</option>
+                        {departments.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => startEditDept(u)}
+                        className={clsx(
+                          'flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium transition-colors',
+                          u.department
+                            ? 'bg-bc-primary/10 text-bc-primary hover:bg-bc-primary/20'
+                            : 'bg-gray-50 text-bc-text-muted hover:bg-gray-100',
+                        )}
+                      >
+                        <Building2 size={10} />
+                        {u.department?.name || 'Assign dept...'}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingUserId === u.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          value={editPosition}
+                          onChange={(e) => setEditPosition(e.target.value)}
+                          className="rounded border border-bc-border bg-white px-2 py-1 text-xs outline-none w-28"
+                          placeholder="Jabatan"
+                        />
+                        <button onClick={() => saveEditDept(u.id)} className="rounded p-1 text-green-600 hover:bg-green-50">
+                          <Check size={12} />
+                        </button>
+                        <button onClick={() => setEditingUserId(null)} className="rounded p-1 text-red-500 hover:bg-red-50">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-bc-text-muted flex items-center gap-1">
+                        <Briefcase size={10} />
+                        {u.position || '-'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <button
-                      onClick={() => handleToggleActive(user.id, user.isActive)}
-                      disabled={user.role === 'SUPER_ADMIN'}
+                      onClick={() => handleToggleActive(u.id, u.isActive)}
+                      disabled={u.role === 'SUPER_ADMIN'}
                       className={clsx(
                         'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                        user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600',
+                        u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600',
                       )}
                     >
-                      {user.isActive ? 'Aktif' : 'Nonaktif'}
+                      {u.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-xs text-bc-text-muted">
-                    {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum pernah'}
+                    {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum pernah'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => handleResetPw(user.id, user.email)}
+                        onClick={() => handleResetPw(u.id, u.email)}
                         className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-bg-muted hover:text-bc-primary transition-colors"
                         title="Reset Password"
                       >
                         <Key size={14} />
                       </button>
-                      {user.role !== 'SUPER_ADMIN' && (
+                      {u.role !== 'SUPER_ADMIN' && (
                         <button
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => handleDelete(u.id)}
                           className="rounded-lg p-1.5 text-bc-text-muted hover:bg-red-50 hover:text-red-500 transition-colors"
                           title="Hapus User"
                         >
@@ -246,7 +380,7 @@ export default function UsersPage() {
   );
 }
 
-function AddUserForm({ onDone }: { onDone: (result?: any) => void }) {
+function AddUserForm({ orgId, onDone }: { orgId?: string; onDone: (result?: any) => void }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('USER');
@@ -257,7 +391,7 @@ function AddUserForm({ onDone }: { onDone: (result?: any) => void }) {
     if (!email || !name) return;
     setLoading(true);
     try {
-      const result = await createUser({ email, name, role: role === 'USER' ? undefined : role });
+      const result = await createUser({ email, name, role: role === 'USER' ? undefined : role }, orgId);
       onDone(result);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Gagal membuat user');
@@ -297,7 +431,7 @@ function AddUserForm({ onDone }: { onDone: (result?: any) => void }) {
   );
 }
 
-function BulkUploadForm({ onDone }: { onDone: () => void }) {
+function BulkUploadForm({ orgId, onDone }: { orgId?: string; onDone: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
@@ -328,7 +462,7 @@ function BulkUploadForm({ onDone }: { onDone: () => void }) {
 
     setLoading(true);
     try {
-      const res = await bulkCreateUsers(users);
+      const res = await bulkCreateUsers(users, orgId);
       setResults(res);
     } catch {
       alert('Gagal upload');
