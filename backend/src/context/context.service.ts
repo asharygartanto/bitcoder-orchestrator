@@ -21,7 +21,7 @@ export class ContextService {
       where: { organizationId },
       include: {
         _count: { select: { documents: true, apiConfigs: true } },
-        documents: { select: { name: true } },
+        documents: { select: { name: true, id: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
