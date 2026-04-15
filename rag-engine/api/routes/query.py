@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest, SearchRequest, MultiSearchRequest, GenerateRequest
+from api.schemas import QueryRequest, QueryResponse, StreamQueryRequest, SearchRequest, MultiSearchRequest, GenerateRequest, GatherApiRequest
 from services.rag_pipeline import RAGPipeline
 
 router = APIRouter()
@@ -87,6 +87,18 @@ async def generate_answer(request: GenerateRequest):
             api_results=request.api_results,
         )
         return QueryResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/gather-api")
+async def gather_api_results(request: GatherApiRequest):
+    try:
+        api_results = await rag_pipeline.gather_api(
+            query=request.query,
+            api_configs=request.api_configs,
+        )
+        return {"api_results": api_results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -85,6 +85,11 @@ class MultiSearchRequest(BaseModel):
     top_k: int = 5
 
 
+class GatherApiRequest(BaseModel):
+    query: str
+    api_configs: list[dict]
+
+
 class GenerateRequest(BaseModel):
     query: str
     sources: list[SourceReference]

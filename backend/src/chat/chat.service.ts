@@ -244,11 +244,8 @@ export class ChatService {
     if (allApiConfigs.length > 0) {
       try {
         const { data: apiData } = await firstValueFrom(
-          this.httpService.post(`${ragUrl}/api/query`, {
+          this.httpService.post(`${ragUrl}/api/query/gather-api`, {
             query: content,
-            context_id: contexts[0].id,
-            organization_id: organizationId,
-            top_k: 1,
             api_configs: allApiConfigs,
           }),
         );
@@ -286,43 +283,22 @@ export class ChatService {
 
     let fullAnswer = '';
     try {
-      const ragResponse = await fetch(`${ragUrl}/api/query/generate/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data: generateData } = await firstValueFrom(
+        this.httpService.post(`${ragUrl}/api/query/generate`, {
           query: content,
           sources: topSources,
           api_results: apiResults.length > 0 ? apiResults : undefined,
         }),
-      });
+      );
 
-      const reader = (ragResponse as any).body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      fullAnswer = generateData.answer || '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              res.write('data: [DONE]\n\n');
-            } else {
-              res.write(`${line}\n\n`);
-              if (!data.startsWith('{')) {
-                fullAnswer += data;
-              }
-            }
-          }
-        }
+      for (let i = 0; i < fullAnswer.length; i += 20) {
+        const chunk = fullAnswer.slice(i, i + 20);
+        res.write(`data: ${chunk}\n\n`);
+        await new Promise((r) => setTimeout(r, 15));
       }
-      reader.releaseLock();
+      res.write('data: [DONE]\n\n');
     } catch {
       fullAnswer = fullAnswer || 'Maaf, terjadi kesalahan saat memproses jawaban.';
       res.write(`data: ${fullAnswer}\n\n`);

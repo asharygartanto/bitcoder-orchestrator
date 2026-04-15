@@ -164,6 +164,9 @@ class RAGPipeline:
 
         yield "data: [DONE]\n\n"
 
+    async def gather_api(self, query: str, api_configs: list[dict]) -> list[dict]:
+        return await self.api_context.gather_api_contexts(api_configs, query)
+
     def search(self, query: str, context_id: str, organization_id: str, top_k: int = 5) -> list[dict]:
         query_embedding = self.embedding_service.embed_query(query)
         return self.vector_store.query(
