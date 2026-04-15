@@ -126,7 +126,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <NavLink
               to="/departments"
               icon={<Building2 size={20} />}
-              label="Struktur Org"
+              label="Org Structure"
               active={location.pathname === '/departments'}
               collapsed={sidebarCollapsed}
               primaryColor={pc}

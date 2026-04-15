@@ -6,7 +6,8 @@ import {
   deleteDepartment,
 } from '../services/department';
 import { getUsers, updateUser } from '../services/user';
-import type { Department, OrgUser } from '../types';
+import { getClients } from '../services/client';
+import type { Department, OrgUser, Client } from '../types';
 import {
   Plus,
   Trash2,
@@ -18,12 +19,14 @@ import {
   Check,
   X,
   RefreshCw,
+  Link2,
 } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<OrgUser[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
@@ -32,9 +35,10 @@ export default function DepartmentsPage() {
 
   const loadData = async () => {
     try {
-      const [depts, usrs] = await Promise.all([getDepartments(), getUsers()]);
+      const [depts, usrs, cls] = await Promise.all([getDepartments(), getUsers(), getClients()]);
       setDepartments(depts);
       setUsers(usrs);
+      setClients(cls);
     } catch {} finally {
       setLoading(false);
     }
@@ -54,12 +58,12 @@ export default function DepartmentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus department ini?')) return;
+    if (!confirm('Delete this department?')) return;
     try {
       await deleteDepartment(id);
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal menghapus');
+      alert(err.response?.data?.message || 'Failed to delete');
     }
   };
 
@@ -69,6 +73,8 @@ export default function DepartmentsPage() {
       loadData();
     } catch {}
   };
+
+  const getClientForOrg = (orgId: string) => clients.find((c) => c.organizationId === orgId);
 
   const buildTree = (parentId: string | null, level: number): React.ReactNode => {
     const children = departments.filter((d) => d.parentId === parentId);
@@ -83,12 +89,7 @@ export default function DepartmentsPage() {
 
           return (
             <div key={dept.id} className="mb-1">
-              <div
-                className={clsx(
-                  'group flex items-center gap-2 rounded-lg px-3 py-2.5 transition-all',
-                  'hover:bg-bc-bg-muted',
-                )}
-              >
+              <div className="group flex items-center gap-2 rounded-lg px-3 py-2.5 transition-all hover:bg-bc-bg-muted">
                 {hasChildren ? (
                   <button onClick={() => toggleExpand(dept.id)} className="shrink-0 text-bc-text-muted">
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -141,12 +142,9 @@ export default function DepartmentsPage() {
 
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
                       <button
-                        onClick={() => {
-                          setCreateParentId(dept.id);
-                          setShowCreate(true);
-                        }}
+                        onClick={() => { setCreateParentId(dept.id); setShowCreate(true); }}
                         className="rounded p-1 text-bc-text-muted hover:text-bc-primary hover:bg-bc-primary/10"
-                        title="Tambah sub-department"
+                        title="Add sub-department"
                       >
                         <Plus size={12} />
                       </button>
@@ -160,7 +158,7 @@ export default function DepartmentsPage() {
                       <button
                         onClick={() => handleDelete(dept.id)}
                         className="rounded p-1 text-bc-text-muted hover:text-red-500 hover:bg-red-50"
-                        title="Hapus"
+                        title="Delete"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -190,28 +188,31 @@ export default function DepartmentsPage() {
   };
 
   const unassignedUsers = users.filter((u) => !(u as any).department);
+  const linkedClient = clients.length > 0 ? clients[0] : null;
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-bc-border px-6 py-4">
         <div>
-          <h1 className="text-lg font-bold text-bc-text-dark">Struktur Organisasi</h1>
+          <h1 className="text-lg font-bold text-bc-text-dark">Org Structure</h1>
           <p className="text-xs text-bc-text-muted mt-0.5">
-            {departments.length} department · {users.length} user
+            {departments.length} departments · {users.length} users
+            {linkedClient && (
+              <span className="ml-2 inline-flex items-center gap-1 text-bc-primary">
+                <Link2 size={10} /> {linkedClient.name}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={loadData}
-            className="rounded-lg p-2 text-bc-text-muted hover:bg-bc-bg-muted transition-colors"
-          >
+          <button onClick={loadData} className="rounded-lg p-2 text-bc-text-muted hover:bg-bc-bg-muted transition-colors">
             <RefreshCw size={16} />
           </button>
           <button
             onClick={() => { setCreateParentId(null); setShowCreate(!showCreate); }}
             className="flex items-center gap-1 rounded-lg bg-bc-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-bc-primary-dark transition-all"
           >
-            <Plus size={12} /> Department Baru
+            <Plus size={12} /> New Department
           </button>
         </div>
       </div>
@@ -226,12 +227,12 @@ export default function DepartmentsPage() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
-          <div className="text-center text-xs text-bc-text-muted py-8">Memuat...</div>
+          <div className="text-center text-xs text-bc-text-muted py-8">Loading...</div>
         ) : departments.length === 0 ? (
           <div className="text-center py-12">
             <Building2 size={48} className="mx-auto mb-3 text-bc-text-muted" />
-            <h3 className="text-sm font-semibold text-bc-text-secondary">Belum ada department</h3>
-            <p className="mt-1 text-xs text-bc-text-muted">Buat department pertama untuk memulai struktur organisasi.</p>
+            <h3 className="text-sm font-semibold text-bc-text-secondary">No departments yet</h3>
+            <p className="mt-1 text-xs text-bc-text-muted">Create your first department to start building the org structure.</p>
           </div>
         ) : (
           <>
@@ -240,7 +241,7 @@ export default function DepartmentsPage() {
             {unassignedUsers.length > 0 && (
               <div className="mt-6 pt-4 border-t border-bc-border">
                 <p className="text-xs font-semibold text-bc-text-muted mb-2">
-                  User tanpa department ({unassignedUsers.length})
+                  Unassigned Users ({unassignedUsers.length})
                 </p>
                 <div className="space-y-1">
                   {unassignedUsers.map((u) => (
@@ -253,12 +254,10 @@ export default function DepartmentsPage() {
                       </div>
                       <select
                         value=""
-                        onChange={(e) => {
-                          if (e.target.value) handleAssignUser(u.id, e.target.value);
-                        }}
+                        onChange={(e) => { if (e.target.value) handleAssignUser(u.id, e.target.value); }}
                         className="rounded border border-bc-border bg-white px-2 py-1 text-[10px] outline-none opacity-0 group-hover:opacity-100 transition-all"
                       >
-                        <option value="">Assign ke dept...</option>
+                        <option value="">Assign to dept...</option>
                         {departments.map((d) => (
                           <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
@@ -307,7 +306,7 @@ function CreateDepartmentForm({
       });
       onDone();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal membuat department');
+      alert(err.response?.data?.message || 'Failed to create department');
     } finally {
       setLoading(false);
     }
@@ -317,26 +316,26 @@ function CreateDepartmentForm({
     <div className="border-b border-bc-border px-6 py-4 bg-bc-bg-subtle">
       <form onSubmit={handleSubmit} className="space-y-3">
         <h3 className="text-sm font-semibold text-bc-text-dark">
-          {defaultParentId ? 'Tambah Sub-Department' : 'Buat Department Baru'}
+          {defaultParentId ? 'Add Sub-Department' : 'Create New Department'}
         </h3>
         <div className="flex gap-3 items-end">
           <div className="flex-1">
-            <label className="text-xs font-medium text-bc-text-muted mb-1 block">Nama</label>
+            <label className="text-xs font-medium text-bc-text-muted mb-1 block">Name</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-bc-border bg-white px-3 py-2 text-sm outline-none focus:border-bc-primary"
-              placeholder="Contoh: Direksi, Divisi IT, Tim Backend"
+              placeholder="e.g. Board of Directors, IT Division, Backend Team"
               required
             />
           </div>
           <div className="flex-1">
-            <label className="text-xs font-medium text-bc-text-muted mb-1 block">Deskripsi</label>
+            <label className="text-xs font-medium text-bc-text-muted mb-1 block">Description</label>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full rounded-lg border border-bc-border bg-white px-3 py-2 text-sm outline-none focus:border-bc-primary"
-              placeholder="Opsional"
+              placeholder="Optional"
             />
           </div>
           <div className="w-48">
@@ -346,7 +345,7 @@ function CreateDepartmentForm({
               onChange={(e) => setParentId(e.target.value)}
               className="w-full rounded-lg border border-bc-border bg-white px-3 py-2 text-sm outline-none focus:border-bc-primary"
             >
-              <option value="">-- Root (Tertinggi) --</option>
+              <option value="">-- Root (Top Level) --</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
@@ -357,10 +356,10 @@ function CreateDepartmentForm({
             disabled={loading}
             className="rounded-lg bg-bc-primary px-4 py-2 text-xs font-semibold text-white hover:bg-bc-primary-dark disabled:opacity-50"
           >
-            {loading ? 'Menyimpan...' : 'Buat'}
+            {loading ? 'Saving...' : 'Create'}
           </button>
           <button type="button" onClick={onDone} className="rounded-lg border border-bc-border px-3 py-2 text-xs text-bc-text-secondary">
-            Batal
+            Cancel
           </button>
         </div>
       </form>
