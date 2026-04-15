@@ -145,6 +145,9 @@ export class NewsCrawlService {
     });
 
     for (const doc of existingDocs) {
+      const docUrl = doc.name.replace('[CRAWL]', '').trim();
+      if (docUrl !== url && !doc.name.includes(url)) continue;
+
       try {
         await firstValueFrom(
           this.httpService.delete(`${ragUrl}/api/documents/delete`, {
