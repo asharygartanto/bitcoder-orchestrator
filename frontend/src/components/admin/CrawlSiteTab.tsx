@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { crawlUrl } from '../../services/monitor';
+import { getDocumentsByContext, deleteDocument } from '../../services/document';
+import type { Document } from '../../types';
 import {
   Plus,
   Loader2,
@@ -9,6 +11,8 @@ import {
   AlertTriangle,
   FileText,
   Link,
+  Globe,
+  Trash2,
 } from 'lucide-react';
 
 interface CrawlResult {
@@ -30,6 +34,18 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
   const [newUrl, setNewUrl] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [crawledDocs, setCrawledDocs] = useState<Document[]>([]);
+
+  const loadCrawledDocs = async () => {
+    try {
+      const docs = await getDocumentsByContext(contextId);
+      setCrawledDocs(docs.filter((d) => d.name.includes('[CRAWL]')));
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadCrawledDocs();
+  }, [contextId]);
 
   const addUrl = () => {
     if (!newUrl.trim()) return;
@@ -62,6 +78,7 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
       };
       setUrls(done);
       onCrawlComplete();
+      loadCrawledDocs();
     } catch (err: any) {
       const failed = [...updated];
       failed[index] = { ...failed[index], status: 'error', error: err.response?.data?.message || err.message };
@@ -77,6 +94,17 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
     }
     setLoading(false);
   };
+
+  const handleDeleteCrawl = async (docId: string) => {
+    if (!confirm('Hapus crawl ini?')) return;
+    try {
+      await deleteDocument(docId);
+      setCrawledDocs(crawledDocs.filter((d) => d.id !== docId));
+      onCrawlComplete();
+    } catch {}
+  };
+
+  const extractUrl = (name: string) => name.replace('[CRAWL]', '').trim();
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -198,6 +226,42 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
           </div>
         </div>
       )}
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-bc-text-dark flex items-center gap-2">
+          <Globe size={16} className="text-bc-primary" />
+          Crawl Tersimpan ({crawledDocs.length})
+        </h3>
+        {crawledDocs.length === 0 ? (
+          <p className="text-xs text-bc-text-muted py-4 text-center">Belum ada crawl site untuk context ini.</p>
+        ) : (
+          <div className="space-y-2">
+            {crawledDocs.map((doc) => (
+              <div key={doc.id} className="group flex items-center gap-3 rounded-xl border border-bc-border bg-white p-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bc-primary/10 shrink-0">
+                  <Globe size={14} className="text-bc-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-bc-text-dark truncate">{extractUrl(doc.name)}</p>
+                  <p className="text-[10px] text-bc-text-muted mt-0.5">
+                    {doc.status === 'READY' ? (
+                      <span className="text-green-600">{doc.vectorCount} chunks · Ready</span>
+                    ) : (
+                      <span>{doc.status}</span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDeleteCrawl(doc.id)}
+                  className="shrink-0 rounded-lg p-1.5 text-bc-text-muted opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
