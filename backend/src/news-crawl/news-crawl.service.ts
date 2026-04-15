@@ -83,9 +83,12 @@ export class NewsCrawlService {
       throw new BadRequestException(`Konten terlalu pendek atau tidak ditemukan di ${dto.url}`);
     }
 
-    const documentId = `crawl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const documentName = `[CRAWL] ${dto.title || article.title}`;
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
+    const documentName = `[CRAWL] ${dto.title || article.title}`;
+
+    await this.deleteExistingCrawl(dto.contextId, organizationId, dto.url, ragUrl);
+
+    const documentId = `crawl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     const textContent = this.buildDocument(dto, article);
 
@@ -130,6 +133,39 @@ export class NewsCrawlService {
       publishDate: article.publishDate,
       uploadResult: data,
     };
+  }
+
+  private async deleteExistingCrawl(contextId: string, organizationId: string, url: string, ragUrl: string) {
+    const existingDocs = await this.prisma.document.findMany({
+      where: {
+        contextId,
+        organizationId,
+        name: { contains: '[CRAWL]' },
+      },
+    });
+
+    for (const doc of existingDocs) {
+      try {
+        await firstValueFrom(
+          this.httpService.delete(`${ragUrl}/api/documents/delete`, {
+            data: {
+              document_id: doc.id,
+              context_id: contextId,
+              organization_id: organizationId,
+            },
+          }),
+        );
+      } catch {}
+      await this.prisma.document.delete({ where: { id: doc.id } });
+    }
+
+    try {
+      await firstValueFrom(
+        this.httpService.delete(`${ragUrl}/api/documents/delete-crawl-by-url`, {
+          data: { url, context_id: contextId, organization_id: organizationId },
+        }),
+      );
+    } catch {}
   }
 
   private async fetchPage(url: string): Promise<string> {

@@ -262,6 +262,26 @@ async def delete_document(request: DeleteRequest):
     }
 
 
+@router.delete("/delete-crawl-by-url")
+async def delete_crawl_by_url(request: dict):
+    vector_store = VectorStore()
+    url = request.get("url", "")
+    context_id = request.get("context_id", "")
+    organization_id = request.get("organization_id", "")
+
+    if not url or not context_id or not organization_id:
+        raise HTTPException(status_code=400, detail="url, context_id, and organization_id are required")
+
+    deleted = vector_store.delete_crawl_by_url(organization_id, context_id, url)
+
+    return {
+        "success": True,
+        "url": url,
+        "chunks_deleted": deleted,
+        "message": f"Deleted {deleted} crawl vectors for URL.",
+    }
+
+
 @router.post("/reindex")
 async def reindex_context(
     background_tasks: BackgroundTasks, request: ReindexRequest

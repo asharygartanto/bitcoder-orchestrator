@@ -138,6 +138,29 @@ class VectorStore:
 
         return len(all_ids.get("ids", []))
 
+    def delete_crawl_by_url(self, organization_id: str, context_id: str, url: str):
+        collection = self.get_or_create_collection(organization_id, context_id)
+
+        count = collection.count()
+        if count == 0:
+            return 0
+
+        peek = collection.get(include=["metadatas"])
+        ids_to_delete = []
+
+        if peek and peek.get("metadatas"):
+            for i, meta in enumerate(peek["metadatas"]):
+                doc_name = meta.get("document_name", "")
+                source_url = meta.get("source_url", "")
+                if "[CRAWL]" in doc_name:
+                    if url in doc_name or url in source_url or source_url == url:
+                        ids_to_delete.append(peek["ids"][i])
+
+        if ids_to_delete:
+            collection.delete(ids=ids_to_delete)
+
+        return len(ids_to_delete)
+
     def delete_collection(self, organization_id: str, context_id: str):
         name = self._collection_name(organization_id, context_id)
         try:
