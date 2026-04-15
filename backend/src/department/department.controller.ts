@@ -7,7 +7,9 @@ import {
   Param,
   Body,
   Req,
+  Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { DepartmentService } from './department.service';
@@ -22,22 +24,38 @@ import { UserRole } from '@prisma/client';
 export class DepartmentController {
   constructor(private departmentService: DepartmentService) {}
 
+  private getOrgId(req: Request, queryOrgId?: string): string {
+    if (queryOrgId && req.user!['role'] === 'SUPER_ADMIN') return queryOrgId;
+    return req.user!.organizationId;
+  }
+
   @Post()
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async create(@Req() req: Request, @Body() dto: CreateDepartmentDto) {
-    return this.departmentService.create(req.user!.organizationId, dto);
+  async create(
+    @Req() req: Request,
+    @Body() dto: CreateDepartmentDto,
+    @Query('organizationId') queryOrgId?: string,
+  ) {
+    return this.departmentService.create(this.getOrgId(req, queryOrgId), dto);
   }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async findAll(@Req() req: Request) {
-    return this.departmentService.findAll(req.user!.organizationId);
+  async findAll(
+    @Req() req: Request,
+    @Query('organizationId') queryOrgId?: string,
+  ) {
+    return this.departmentService.findAll(this.getOrgId(req, queryOrgId));
   }
 
   @Get('tree')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async getTree(@Req() req: Request) {
-    const departments = await this.departmentService.findAll(req.user!.organizationId);
+  async getTree(
+    @Req() req: Request,
+    @Query('organizationId') queryOrgId?: string,
+  ) {
+    const orgId = this.getOrgId(req, queryOrgId);
+    const departments = await this.departmentService.findAll(orgId);
     const map = new Map(departments.map((d) => [d.id, { ...d, children: [] as any[] }]));
     const tree: any[] = [];
 
@@ -54,8 +72,12 @@ export class DepartmentController {
 
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    return this.departmentService.findOne(req.user!.organizationId, id);
+  async findOne(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Query('organizationId') queryOrgId?: string,
+  ) {
+    return this.departmentService.findOne(this.getOrgId(req, queryOrgId), id);
   }
 
   @Patch(':id')
@@ -64,13 +86,18 @@ export class DepartmentController {
     @Req() req: Request,
     @Param('id') id: string,
     @Body() dto: UpdateDepartmentDto,
+    @Query('organizationId') queryOrgId?: string,
   ) {
-    return this.departmentService.update(req.user!.organizationId, id, dto);
+    return this.departmentService.update(this.getOrgId(req, queryOrgId), id, dto);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    return this.departmentService.remove(req.user!.organizationId, id);
+  async remove(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Query('organizationId') queryOrgId?: string,
+  ) {
+    return this.departmentService.remove(this.getOrgId(req, queryOrgId), id);
   }
 }

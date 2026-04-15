@@ -1,18 +1,22 @@
 import api from './api';
 import type { Department } from '../types';
 
-export async function getDepartments(): Promise<Department[]> {
-  const { data } = await api.get<Department[]>('/api/departments');
+function orgParams(orgId?: string) {
+  return orgId ? { params: { organizationId: orgId } } : undefined;
+}
+
+export async function getDepartments(orgId?: string): Promise<Department[]> {
+  const { data } = await api.get<Department[]>('/api/departments', orgParams(orgId));
   return data;
 }
 
-export async function getDepartmentTree(): Promise<Department[]> {
-  const { data } = await api.get<Department[]>('/api/departments/tree');
+export async function getDepartmentTree(orgId?: string): Promise<Department[]> {
+  const { data } = await api.get<Department[]>('/api/departments/tree', orgParams(orgId));
   return data;
 }
 
-export async function getDepartment(id: string): Promise<Department> {
-  const { data } = await api.get<Department>(`/api/departments/${id}`);
+export async function getDepartment(id: string, orgId?: string): Promise<Department> {
+  const { data } = await api.get<Department>(`/api/departments/${id}`, orgParams(orgId));
   return data;
 }
 
@@ -21,19 +25,20 @@ export async function createDepartment(dept: {
   description?: string;
   parentId?: string;
   level?: number;
-}): Promise<Department> {
-  const { data } = await api.post<Department>('/api/departments', dept);
+}, orgId?: string): Promise<Department> {
+  const { data } = await api.post<Department>('/api/departments', dept, orgParams(orgId));
   return data;
 }
 
 export async function updateDepartment(
   id: string,
   dept: { name?: string; description?: string; parentId?: string; level?: number },
+  orgId?: string,
 ): Promise<Department> {
-  const { data } = await api.patch<Department>(`/api/departments/${id}`, dept);
+  const { data } = await api.patch<Department>(`/api/departments/${id}`, dept, orgParams(orgId));
   return data;
 }
 
-export async function deleteDepartment(id: string): Promise<void> {
-  await api.delete(`/api/departments/${id}`);
+export async function deleteDepartment(id: string, orgId?: string): Promise<void> {
+  await api.delete(`/api/departments/${id}`, orgParams(orgId));
 }

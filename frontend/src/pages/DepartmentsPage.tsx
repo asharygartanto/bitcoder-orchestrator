@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuthStore } from '../stores/auth.store';
 import {
   getDepartments,
   createDepartment,
@@ -24,6 +25,9 @@ import {
 import clsx from 'clsx';
 
 export default function DepartmentsPage() {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -32,21 +36,42 @@ export default function DepartmentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createParentId, setCreateParentId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
 
-  const loadData = async () => {
+  const loadData = async (orgId?: string) => {
     try {
-      const [depts, usrs, cls] = await Promise.all([getDepartments(), getUsers(), getClients()]);
+      const fetchOrgId = isSuperAdmin ? orgId || selectedOrgId : undefined;
+      const [depts, usrs, cls] = await Promise.all([
+        getDepartments(fetchOrgId),
+        getUsers(fetchOrgId),
+        isSuperAdmin ? getClients() : Promise.resolve([]),
+      ]);
       setDepartments(depts);
       setUsers(usrs);
-      setClients(cls);
+      if (isSuperAdmin) setClients(cls);
     } catch {} finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isSuperAdmin && clients.length > 0 && !selectedOrgId) {
+      const firstOrgId = clients[0].organizationId;
+      setSelectedOrgId(firstOrgId);
+      loadData(firstOrgId);
+    } else if (!isSuperAdmin) {
+      loadData();
+    }
+  }, [isSuperAdmin]);
+
+  const activeOrgId = isSuperAdmin ? selectedOrgId : undefined;
+
+  const handleClientChange = (orgId: string) => {
+    setSelectedOrgId(orgId);
+    setExpandedIds(new Set());
+    setLoading(true);
+    loadData(orgId);
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -60,8 +85,8 @@ export default function DepartmentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this department?')) return;
     try {
-      await deleteDepartment(id);
-      loadData();
+      await deleteDepartment(id, activeOrgId);
+      loadData(activeOrgId);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete');
     }
@@ -70,11 +95,9 @@ export default function DepartmentsPage() {
   const handleAssignUser = async (userId: string, departmentId: string | null) => {
     try {
       await updateUser(userId, { departmentId: departmentId || '' } as any);
-      loadData();
+      loadData(activeOrgId);
     } catch {}
   };
-
-  const getClientForOrg = (orgId: string) => clients.find((c) => c.organizationId === orgId);
 
   const buildTree = (parentId: string | null, level: number): React.ReactNode => {
     const children = departments.filter((d) => d.parentId === parentId);
@@ -105,9 +128,9 @@ export default function DepartmentsPage() {
                     dept={dept}
                     departments={departments}
                     onSave={async (name, parentId) => {
-                      await updateDepartment(dept.id, { name, parentId });
+                      await updateDepartment(dept.id, { name, parentId }, activeOrgId);
                       setEditingId(null);
-                      loadData();
+                      loadData(activeOrgId);
                     }}
                     onCancel={() => setEditingId(null)}
                   />
@@ -188,7 +211,7 @@ export default function DepartmentsPage() {
   };
 
   const unassignedUsers = users.filter((u) => !(u as any).department);
-  const linkedClient = clients.length > 0 ? clients[0] : null;
+  const selectedClient = clients.find((c) => c.organizationId === selectedOrgId);
 
   return (
     <div className="h-full flex flex-col">
@@ -197,15 +220,26 @@ export default function DepartmentsPage() {
           <h1 className="text-lg font-bold text-bc-text-dark">Org Structure</h1>
           <p className="text-xs text-bc-text-muted mt-0.5">
             {departments.length} departments · {users.length} users
-            {linkedClient && (
+            {selectedClient && (
               <span className="ml-2 inline-flex items-center gap-1 text-bc-primary">
-                <Link2 size={10} /> {linkedClient.name}
+                <Link2 size={10} /> {selectedClient.name}
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadData} className="rounded-lg p-2 text-bc-text-muted hover:bg-bc-bg-muted transition-colors">
+          {isSuperAdmin && clients.length > 0 && (
+            <select
+              value={selectedOrgId || ''}
+              onChange={(e) => handleClientChange(e.target.value)}
+              className="rounded-lg border border-bc-border bg-white px-3 py-1.5 text-xs outline-none focus:border-bc-primary"
+            >
+              {clients.map((c) => (
+                <option key={c.id} value={c.organizationId}>{c.name}</option>
+              ))}
+            </select>
+          )}
+          <button onClick={() => loadData(activeOrgId)} className="rounded-lg p-2 text-bc-text-muted hover:bg-bc-bg-muted transition-colors">
             <RefreshCw size={16} />
           </button>
           <button
@@ -221,7 +255,8 @@ export default function DepartmentsPage() {
         <CreateDepartmentForm
           departments={departments}
           defaultParentId={createParentId}
-          onDone={() => { setShowCreate(false); setCreateParentId(null); loadData(); }}
+          orgId={activeOrgId}
+          onDone={() => { setShowCreate(false); setCreateParentId(null); loadData(activeOrgId); }}
         />
       )}
 
@@ -277,10 +312,12 @@ export default function DepartmentsPage() {
 function CreateDepartmentForm({
   departments,
   defaultParentId,
+  orgId,
   onDone,
 }: {
   departments: Department[];
   defaultParentId: string | null;
+  orgId?: string;
   onDone: () => void;
 }) {
   const [name, setName] = useState('');
@@ -303,7 +340,7 @@ function CreateDepartmentForm({
         description: description || undefined,
         parentId: parentId || undefined,
         level: parentDept ? parentDept.level + 1 : 0,
-      });
+      }, orgId);
       onDone();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to create department');

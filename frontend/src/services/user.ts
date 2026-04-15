@@ -13,8 +13,10 @@ export interface OrgUser {
   department?: { id: string; name: string } | null;
 }
 
-export async function getUsers(): Promise<OrgUser[]> {
-  const { data } = await api.get<OrgUser[]>('/api/users');
+export async function getUsers(orgId?: string): Promise<OrgUser[]> {
+  const { data } = await api.get<OrgUser[]>('/api/users', {
+    params: orgId ? { organizationId: orgId } : undefined,
+  });
   return data;
 }
 

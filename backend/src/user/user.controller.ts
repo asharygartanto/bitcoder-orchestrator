@@ -36,8 +36,9 @@ export class UserController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async findAll(@Req() req: any) {
-    return this.userService.findAll(req.user.organizationId);
+  async findAll(@Req() req: any, @Query('organizationId') queryOrgId?: string) {
+    const orgId = (queryOrgId && req.user.role === 'SUPER_ADMIN') ? queryOrgId : req.user.organizationId;
+    return this.userService.findAll(orgId);
   }
 
   @Get('monitor/all')
