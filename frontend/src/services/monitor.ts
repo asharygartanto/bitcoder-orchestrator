@@ -34,12 +34,12 @@ export async function getUserStats(): Promise<any> {
   return data;
 }
 
-export async function crawlUrl(dto: { url: string; title: string; contextId: string }): Promise<any> {
+export async function crawlUrl(dto: { url: string; title: string; contextId: string; crawlMode?: 'single' | 'depth' | 'full'; maxDepth?: number }): Promise<any> {
   const { data } = await api.post('/api/news-crawl/url', dto);
   return data;
 }
 
-export async function bulkCrawl(items: { url: string; title: string; contextId: string }[]): Promise<any> {
+export async function bulkCrawl(items: { url: string; title: string; contextId: string; crawlMode?: 'single' | 'depth' | 'full'; maxDepth?: number }[]): Promise<any> {
   const { data } = await api.post('/api/news-crawl/bulk', { items });
   return data;
 }

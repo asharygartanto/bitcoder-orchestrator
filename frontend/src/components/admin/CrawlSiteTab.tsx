@@ -13,6 +13,7 @@ import {
   Link,
   Globe,
   Trash2,
+  Layers,
 } from 'lucide-react';
 
 interface CrawlResult {
@@ -21,8 +22,11 @@ interface CrawlResult {
   status: 'idle' | 'loading' | 'success' | 'error';
   contentLength?: number;
   documentId?: string;
+  pagesCrawled?: number;
   error?: string;
 }
+
+type CrawlMode = 'single' | 'depth' | 'full';
 
 interface Props {
   contextId: string;
@@ -33,6 +37,8 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
   const [urls, setUrls] = useState<CrawlResult[]>([]);
   const [newUrl, setNewUrl] = useState('');
   const [newTitle, setNewTitle] = useState('');
+  const [crawlMode, setCrawlMode] = useState<CrawlMode>('single');
+  const [maxDepth, setMaxDepth] = useState(2);
   const [loading, setLoading] = useState(false);
   const [crawledDocs, setCrawledDocs] = useState<Document[]>([]);
 
@@ -68,6 +74,8 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
         url: updated[index].url,
         title: updated[index].title,
         contextId,
+        crawlMode,
+        maxDepth: crawlMode === 'depth' ? maxDepth : undefined,
       });
       const done = [...updated];
       done[index] = {
@@ -75,6 +83,7 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
         status: 'success',
         contentLength: result.contentLength,
         documentId: result.documentId,
+        pagesCrawled: result.pagesCrawled,
       };
       setUrls(done);
       onCrawlComplete();
@@ -110,6 +119,69 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
     <div className="max-w-4xl space-y-6">
       <div className="rounded-xl border border-bc-border bg-bc-bg-muted/50 p-4 space-y-4">
         <div className="space-y-3">
+          <label className="text-xs font-medium text-bc-text-dark flex items-center gap-1.5">
+            <Layers size={12} /> Mode Crawl
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setCrawlMode('single')}
+              className={clsx(
+                'rounded-lg border px-3 py-2.5 text-left transition-all',
+                crawlMode === 'single'
+                  ? 'border-bc-primary bg-bc-primary/5 ring-1 ring-bc-primary/20'
+                  : 'border-bc-border bg-white hover:border-bc-primary/30',
+              )}
+            >
+              <p className="text-xs font-semibold text-bc-text-dark">Halaman Tunggal</p>
+              <p className="text-[10px] text-bc-text-muted mt-0.5">Crawl hanya 1 halaman yang dimasukkan</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCrawlMode('depth')}
+              className={clsx(
+                'rounded-lg border px-3 py-2.5 text-left transition-all',
+                crawlMode === 'depth'
+                  ? 'border-bc-primary bg-bc-primary/5 ring-1 ring-bc-primary/20'
+                  : 'border-bc-border bg-white hover:border-bc-primary/30',
+              )}
+            >
+              <p className="text-xs font-semibold text-bc-text-dark">Berdasarkan Kedalaman</p>
+              <p className="text-[10px] text-bc-text-muted mt-0.5">Crawl halaman + link internal sesuai tingkat kedalaman</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCrawlMode('full')}
+              className={clsx(
+                'rounded-lg border px-3 py-2.5 text-left transition-all',
+                crawlMode === 'full'
+                  ? 'border-bc-primary bg-bc-primary/5 ring-1 ring-bc-primary/20'
+                  : 'border-bc-border bg-white hover:border-bc-primary/30',
+              )}
+            >
+              <p className="text-xs font-semibold text-bc-text-dark">Crawl Penuh</p>
+              <p className="text-[10px] text-bc-text-muted mt-0.5">Crawl seluruh halaman di domain yang sama (maks. 500)</p>
+            </button>
+          </div>
+
+          {crawlMode === 'depth' && (
+            <div className="flex items-center gap-3 rounded-lg border border-bc-border bg-white px-3 py-2">
+              <label className="text-xs font-medium text-bc-text-dark whitespace-nowrap">Kedalaman Link:</label>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                value={maxDepth}
+                onChange={(e) => setMaxDepth(Number(e.target.value))}
+                className="flex-1 accent-bc-primary"
+              />
+              <span className="text-sm font-semibold text-bc-primary w-6 text-center">{maxDepth}</span>
+              <span className="text-[10px] text-bc-text-muted">tingkat</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
           <label className="text-xs font-medium text-bc-text-dark block">Tambah URL</label>
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -142,6 +214,11 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-bc-text-dark">Antrian URL ({urls.length})</h3>
             <div className="flex items-center gap-2">
+              <span className="text-[10px] text-bc-text-muted">
+                Mode: <span className="font-medium text-bc-text-dark">
+                  {crawlMode === 'single' ? 'Halaman Tunggal' : crawlMode === 'depth' ? `Kedalaman ${maxDepth} Tingkat` : 'Crawl Penuh'}
+                </span>
+              </span>
               <button
                 onClick={crawlAll}
                 disabled={loading}
@@ -185,6 +262,9 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-bc-text-muted">
                         <span className="flex items-center gap-1"><FileText size={10} /> {(item.contentLength || 0).toLocaleString()} chars</span>
                         <span className="font-mono">{item.documentId}</span>
+                        {item.pagesCrawled && item.pagesCrawled > 1 && (
+                          <span className="flex items-center gap-1 text-bc-primary"><Layers size={10} /> {item.pagesCrawled} halaman</span>
+                        )}
                       </div>
                     )}
                     {item.status === 'error' && (
@@ -218,7 +298,9 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
             <div className="text-xs text-yellow-800">
               <p className="font-medium">Catatan:</p>
               <ul className="mt-1 space-y-0.5 text-yellow-700">
-                <li>• Pastikan URL mengandung konten yang dapat dibaca</li>
+                <li>• <strong>Halaman Tunggal</strong> — hanya mengekstrak konten dari URL yang dimasukkan</li>
+                <li>• <strong>Berdasarkan Kedalaman</strong> — mengikuti link internal hingga tingkat kedalaman yang ditentukan</li>
+                <li>• <strong>Crawl Penuh</strong> — menjelajahi seluruh halaman pada domain yang sama (maks. 500 halaman)</li>
                 <li>• Konten akan otomatis di-chunk dan di-vectorisasi</li>
                 <li>• Hasil crawl ditandai dengan prefix [CRAWL] di nama dokumen</li>
               </ul>
