@@ -8,6 +8,7 @@ import { CrawlUrlDto, BulkCrawlUrlDto } from './dto/crawl.dto';
 @Injectable()
 export class NewsCrawlService {
   private readonly logger = new Logger(NewsCrawlService.name);
+  private readonly MAX_PAGES_FULL_CRAWL = 500;
 
   constructor(
     private prisma: PrismaService,
@@ -76,6 +77,17 @@ export class NewsCrawlService {
   }
 
   async crawlAndIndex(dto: CrawlUrlDto, organizationId: string, userId: string) {
+    const crawlMode = dto.crawlMode || 'single';
+
+    if (crawlMode === 'single') {
+      const result = await this.crawlAndIndexSingle(dto, organizationId, userId);
+      return { ...result, pagesCrawled: 1, mode: 'single' };
+    }
+
+    return this.crawlAndIndexMulti(dto, organizationId, userId, crawlMode);
+  }
+
+  private async crawlAndIndexSingle(dto: CrawlUrlDto, organizationId: string, userId: string) {
     const html = await this.fetchPage(dto.url);
     const article = this.extractArticle(html, dto.url);
 
@@ -133,6 +145,130 @@ export class NewsCrawlService {
       publishDate: article.publishDate,
       uploadResult: data,
     };
+  }
+
+  private async crawlAndIndexMulti(dto: CrawlUrlDto, organizationId: string, userId: string, crawlMode: 'depth' | 'full') {
+    const maxPages = crawlMode === 'full' ? this.MAX_PAGES_FULL_CRAWL : 500;
+    const maxDepth = crawlMode === 'depth' ? (dto.maxDepth || 1) : 999;
+
+    const baseUrl = this.getBaseUrl(dto.url);
+    const visited = new Set<string>();
+    const queue: { url: string; depth: number }[] = [{ url: dto.url, depth: 0 }];
+    const results: { url: string; documentId: string; title: string; contentLength: number; status: 'success' | 'error'; error?: string }[] = [];
+
+    this.logger.log(`Starting ${crawlMode} crawl from ${dto.url} (maxDepth=${maxDepth}, maxPages=${maxPages})`);
+
+    while (queue.length > 0 && visited.size < maxPages) {
+      const batch = queue.splice(0, Math.min(5, maxPages - visited.size));
+
+      await Promise.all(batch.map(async ({ url, depth }) => {
+        if (visited.has(url)) return;
+        visited.add(url);
+
+        try {
+          const html = await this.fetchPage(url);
+          const article = this.extractArticle(html, url);
+
+          if (!article.content || article.content.length < 50) {
+            results.push({ url, documentId: '', title: article.title || url, contentLength: 0, status: 'error', error: 'Konten terlalu pendek' });
+            return;
+          }
+
+          const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
+          const documentId = `crawl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+          const documentName = `[CRAWL] ${url}`;
+
+          const textContent = this.buildDocument({ ...dto, url, title: dto.title || article.title }, article);
+
+          const FormData = (await import('form-data')).default;
+          const form = new FormData();
+          const buffer = Buffer.from(textContent, 'utf-8');
+          form.append('file', buffer, { filename: 'article.txt', contentType: 'text/plain' });
+          form.append('document_id', documentId);
+          form.append('document_name', documentName);
+          form.append('context_id', dto.contextId);
+          form.append('organization_id', organizationId);
+
+          const { data } = await firstValueFrom(
+            this.httpService.post(`${ragUrl}/api/documents/upload`, form, {
+              headers: form.getHeaders(),
+              timeout: 120000,
+            }),
+          );
+
+          await this.prisma.document.create({
+            data: {
+              id: documentId,
+              name: documentName,
+              originalName: 'article.txt',
+              fileType: 'text/plain',
+              fileSize: Buffer.byteLength(textContent, 'utf-8'),
+              contextId: dto.contextId,
+              organizationId,
+              uploadedById: userId,
+              status: 'PROCESSING',
+            },
+          });
+
+          results.push({ url, documentId, title: article.title || url, contentLength: article.content.length, status: 'success' });
+
+          if (depth < maxDepth) {
+            const links = this.extractInternalLinks(html, baseUrl);
+            for (const link of links) {
+              if (!visited.has(link) && !queue.some((q) => q.url === link)) {
+                queue.push({ url: link, depth: depth + 1 });
+              }
+            }
+          }
+        } catch (err: any) {
+          results.push({ url, documentId: '', title: url, contentLength: 0, status: 'error', error: err.message });
+        }
+      }));
+    }
+
+    const successCount = results.filter((r) => r.status === 'success').length;
+    this.logger.log(`Crawl complete: ${successCount}/${results.length} pages indexed`);
+
+    return {
+      success: true,
+      mode: crawlMode,
+      pagesCrawled: results.length,
+      pagesSucceeded: successCount,
+      pagesFailed: results.length - successCount,
+      results,
+    };
+  }
+
+  private extractInternalLinks(html: string, baseUrl: string): string[] {
+    const $ = cheerio.load(html);
+    const links = new Set<string>();
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href');
+      if (!href) return;
+
+      try {
+        const resolved = new URL(href, baseUrl).href;
+        const resolvedBase = new URL(baseUrl);
+
+        if (resolved.startsWith(`${resolvedBase.protocol}//${resolvedBase.hostname}`)) {
+          const cleanUrl = resolved.split('#')[0].split('?')[0];
+          if (cleanUrl.match(/\.(html?|php|aspx?|json|xml|css|js|png|jpg|jpeg|gif|svg|ico|pdf|zip|mp4|mp3)$/i)) return;
+          links.add(cleanUrl);
+        }
+      } catch {}
+    });
+
+    return Array.from(links);
+  }
+
+  private getBaseUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      return `${parsed.protocol}//${parsed.hostname}`;
+    } catch {
+      return url;
+    }
   }
 
   private async deleteExistingCrawl(contextId: string, organizationId: string, url: string, ragUrl: string) {
