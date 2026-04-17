@@ -1,14 +1,40 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
 import { CrawlUrlDto, BulkCrawlUrlDto } from './dto/crawl.dto';
 
+interface CrawlJob {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  mode: 'depth' | 'full';
+  seedUrl: string;
+  sessionId: string;
+  contextId: string;
+  organizationId: string;
+  totalFound: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{
+    url: string;
+    documentId: string;
+    title: string;
+    contentLength: number;
+    status: 'success' | 'error';
+    error?: string;
+  }>;
+  startedAt: Date;
+  completedAt?: Date;
+  error?: string;
+}
+
 @Injectable()
 export class NewsCrawlService {
   private readonly logger = new Logger(NewsCrawlService.name);
   private readonly MAX_PAGES_FULL_CRAWL = 500;
+  private crawlJobs = new Map<string, CrawlJob>();
 
   constructor(
     private prisma: PrismaService,
@@ -78,16 +104,82 @@ export class NewsCrawlService {
 
   async crawlAndIndex(dto: CrawlUrlDto, organizationId: string, userId: string) {
     const crawlMode = dto.crawlMode || 'single';
+    const sessionId = `cs_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     if (crawlMode === 'single') {
-      const result = await this.crawlAndIndexSingle(dto, organizationId, userId);
-      return { ...result, pagesCrawled: 1, mode: 'single' };
+      const result = await this.crawlAndIndexSingle(dto, organizationId, userId, sessionId);
+      return { ...result, pagesCrawled: 1, mode: 'single', sessionId };
     }
 
-    return this.crawlAndIndexMulti(dto, organizationId, userId, crawlMode);
+    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+    const job: CrawlJob = {
+      id: jobId,
+      status: 'running',
+      mode: crawlMode as 'depth' | 'full',
+      seedUrl: dto.url,
+      sessionId,
+      contextId: dto.contextId,
+      organizationId,
+      totalFound: 1,
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      results: [],
+      startedAt: new Date(),
+    };
+
+    this.crawlJobs.set(jobId, job);
+
+    this.processMultiCrawl(dto, organizationId, userId, job).catch((err) => {
+      this.logger.error(`Crawl job ${jobId} failed: ${err.message}`);
+      job.status = 'failed';
+      job.error = err.message;
+      job.completedAt = new Date();
+    });
+
+    return {
+      async: true,
+      jobId,
+      sessionId,
+      mode: crawlMode,
+      seedUrl: dto.url,
+      message: `Crawl ${crawlMode === 'depth' ? `kedalaman ${dto.maxDepth || 1} tingkat` : 'penuh'} dimulai di background`,
+    };
   }
 
-  private async crawlAndIndexSingle(dto: CrawlUrlDto, organizationId: string, userId: string) {
+  getJobStatus(jobId: string): CrawlJob {
+    const job = this.crawlJobs.get(jobId);
+    if (!job) throw new NotFoundException('Crawl job tidak ditemukan');
+    return job;
+  }
+
+  async deleteCrawlSession(contextId: string, organizationId: string, sessionId: string) {
+    const docs = await this.prisma.document.findMany({
+      where: {
+        contextId,
+        organizationId,
+        name: { contains: `[CRAWL:${sessionId}]` },
+      },
+    });
+
+    const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
+
+    for (const doc of docs) {
+      try {
+        await firstValueFrom(
+          this.httpService.delete(`${ragUrl}/api/documents/delete`, {
+            data: { document_id: doc.id, context_id: contextId, organization_id: organizationId },
+          }),
+        );
+      } catch {}
+      await this.prisma.document.delete({ where: { id: doc.id } }).catch(() => {});
+    }
+
+    return { deleted: docs.length };
+  }
+
+  private async crawlAndIndexSingle(dto: CrawlUrlDto, organizationId: string, userId: string, sessionId: string) {
     const html = await this.fetchPage(dto.url);
     const article = this.extractArticle(html, dto.url);
 
@@ -96,9 +188,7 @@ export class NewsCrawlService {
     }
 
     const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
-    const documentName = `[CRAWL] ${dto.url}`;
-
-    await this.deleteExistingCrawl(dto.contextId, organizationId, dto.url, ragUrl);
+    const documentName = `[CRAWL:${sessionId}] ${dto.url}`;
 
     const documentId = `crawl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
@@ -147,21 +237,24 @@ export class NewsCrawlService {
     };
   }
 
-  private async crawlAndIndexMulti(dto: CrawlUrlDto, organizationId: string, userId: string, crawlMode: 'depth' | 'full') {
-    const maxPages = crawlMode === 'full' ? this.MAX_PAGES_FULL_CRAWL : 500;
-    const maxDepth = crawlMode === 'depth' ? (dto.maxDepth || 1) : 999;
-
+  private async processMultiCrawl(dto: CrawlUrlDto, organizationId: string, userId: string, job: CrawlJob) {
+    const maxPages = job.mode === 'full' ? this.MAX_PAGES_FULL_CRAWL : 500;
+    const maxDepth = job.mode === 'depth' ? (dto.maxDepth || 1) : 999;
     const baseUrl = this.getBaseUrl(dto.url);
+
     const visited = new Set<string>();
     const queue: { url: string; depth: number }[] = [{ url: dto.url, depth: 0 }];
-    const results: { url: string; documentId: string; title: string; contentLength: number; status: 'success' | 'error'; error?: string }[] = [];
 
-    this.logger.log(`Starting ${crawlMode} crawl from ${dto.url} (maxDepth=${maxDepth}, maxPages=${maxPages})`);
+    this.logger.log(`Starting ${job.mode} crawl from ${dto.url} (maxDepth=${maxDepth}, maxPages=${maxPages}, sessionId=${job.sessionId})`);
 
-    while (queue.length > 0 && visited.size < maxPages) {
-      const batch = queue.splice(0, Math.min(5, maxPages - visited.size));
+    while (queue.length > 0 && visited.size < maxPages && job.status === 'running') {
+      const batchSize = Math.min(3, maxPages - visited.size);
+      const batch = queue.splice(0, batchSize);
+      const filtered = batch.filter(({ url }) => !visited.has(url));
 
-      await Promise.all(batch.map(async ({ url, depth }) => {
+      if (filtered.length === 0) continue;
+
+      await Promise.all(filtered.map(async ({ url, depth }) => {
         if (visited.has(url)) return;
         visited.add(url);
 
@@ -170,13 +263,15 @@ export class NewsCrawlService {
           const article = this.extractArticle(html, url);
 
           if (!article.content || article.content.length < 50) {
-            results.push({ url, documentId: '', title: article.title || url, contentLength: 0, status: 'error', error: 'Konten terlalu pendek' });
+            job.results.push({ url, documentId: '', title: article.title || url, contentLength: 0, status: 'error', error: 'Konten terlalu pendek' });
+            job.processed++;
+            job.failed++;
             return;
           }
 
           const ragUrl = process.env.RAG_ENGINE_URL || 'http://localhost:8000';
           const documentId = `crawl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-          const documentName = `[CRAWL] ${url}`;
+          const documentName = `[CRAWL:${job.sessionId}] ${url}`;
 
           const textContent = this.buildDocument({ ...dto, url, title: dto.title || article.title }, article);
 
@@ -189,7 +284,7 @@ export class NewsCrawlService {
           form.append('context_id', dto.contextId);
           form.append('organization_id', organizationId);
 
-          const { data } = await firstValueFrom(
+          await firstValueFrom(
             this.httpService.post(`${ragUrl}/api/documents/upload`, form, {
               headers: form.getHeaders(),
               timeout: 120000,
@@ -210,7 +305,8 @@ export class NewsCrawlService {
             },
           });
 
-          results.push({ url, documentId, title: article.title || url, contentLength: article.content.length, status: 'success' });
+          job.results.push({ url, documentId, title: article.title || url, contentLength: article.content.length, status: 'success' });
+          job.succeeded++;
 
           if (depth < maxDepth) {
             const links = this.extractInternalLinks(html, baseUrl);
@@ -219,24 +315,20 @@ export class NewsCrawlService {
                 queue.push({ url: link, depth: depth + 1 });
               }
             }
+            job.totalFound = visited.size + queue.length;
           }
         } catch (err: any) {
-          results.push({ url, documentId: '', title: url, contentLength: 0, status: 'error', error: err.message });
+          job.results.push({ url, documentId: '', title: url, contentLength: 0, status: 'error', error: err.message });
+          job.failed++;
         }
+
+        job.processed++;
       }));
     }
 
-    const successCount = results.filter((r) => r.status === 'success').length;
-    this.logger.log(`Crawl complete: ${successCount}/${results.length} pages indexed`);
-
-    return {
-      success: true,
-      mode: crawlMode,
-      pagesCrawled: results.length,
-      pagesSucceeded: successCount,
-      pagesFailed: results.length - successCount,
-      results,
-    };
+    job.status = job.status === 'running' ? 'completed' : job.status;
+    job.completedAt = new Date();
+    this.logger.log(`Crawl job ${job.id} done: ${job.succeeded}/${job.processed} pages`);
   }
 
   private extractInternalLinks(html: string, baseUrl: string): string[] {
@@ -269,42 +361,6 @@ export class NewsCrawlService {
     } catch {
       return url;
     }
-  }
-
-  private async deleteExistingCrawl(contextId: string, organizationId: string, url: string, ragUrl: string) {
-    const existingDocs = await this.prisma.document.findMany({
-      where: {
-        contextId,
-        organizationId,
-        name: { contains: '[CRAWL]' },
-      },
-    });
-
-    for (const doc of existingDocs) {
-      const docUrl = doc.name.replace('[CRAWL]', '').trim();
-      if (docUrl !== url && !doc.name.includes(url)) continue;
-
-      try {
-        await firstValueFrom(
-          this.httpService.delete(`${ragUrl}/api/documents/delete`, {
-            data: {
-              document_id: doc.id,
-              context_id: contextId,
-              organization_id: organizationId,
-            },
-          }),
-        );
-      } catch {}
-      await this.prisma.document.delete({ where: { id: doc.id } });
-    }
-
-    try {
-      await firstValueFrom(
-        this.httpService.delete(`${ragUrl}/api/documents/delete-crawl-by-url`, {
-          data: { url, context_id: contextId, organization_id: organizationId },
-        }),
-      );
-    } catch {}
   }
 
   private async fetchPage(url: string): Promise<string> {

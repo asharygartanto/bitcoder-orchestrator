@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import clsx from 'clsx';
-import { crawlUrl } from '../../services/monitor';
+import { crawlUrl, getCrawlJobStatus, deleteCrawlSession, type CrawlJobStatus } from '../../services/monitor';
 import { getDocumentsByContext, deleteDocument } from '../../services/document';
 import type { Document } from '../../types';
 import {
@@ -14,6 +14,9 @@ import {
   Globe,
   Trash2,
   Layers,
+  ChevronDown,
+  ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 
 interface CrawlResult {
@@ -23,10 +26,29 @@ interface CrawlResult {
   contentLength?: number;
   documentId?: string;
   pagesCrawled?: number;
+  jobId?: string;
+  sessionId?: string;
   error?: string;
 }
 
 type CrawlMode = 'single' | 'depth' | 'full';
+
+interface ActiveJob {
+  jobId: string;
+  index: number;
+  job?: CrawlJobStatus;
+}
+
+interface CrawlSession {
+  sessionId: string;
+  seedUrl: string;
+  docs: Document[];
+}
+
+function extractSessionId(name: string): string | null {
+  const m = name.match(/\[CRAWL:(cs_\w+)\]/);
+  return m ? m[1] : null;
+}
 
 interface Props {
   contextId: string;
@@ -40,18 +62,74 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
   const [crawlMode, setCrawlMode] = useState<CrawlMode>('single');
   const [maxDepth, setMaxDepth] = useState(2);
   const [loading, setLoading] = useState(false);
-  const [crawledDocs, setCrawledDocs] = useState<Document[]>([]);
+  const [activeJobs, setActiveJobs] = useState<Map<number, ActiveJob>>(new Map());
+  const [sessions, setSessions] = useState<CrawlSession[]>([]);
+  const [legacyDocs, setLegacyDocs] = useState<Document[]>([]);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const pollRef = useRef<number | null>(null);
 
   const loadCrawledDocs = async () => {
     try {
       const docs = await getDocumentsByContext(contextId);
-      setCrawledDocs(docs.filter((d) => d.name.includes('[CRAWL]') || d.id.startsWith('crawl_')));
+      const crawlDocs = docs.filter((d) => d.name.includes('[CRAWL'));
+
+      const sessionMap = new Map<string, CrawlSession>();
+      const legacies: Document[] = [];
+
+      for (const doc of crawlDocs) {
+        const sid = extractSessionId(doc.name);
+        if (sid) {
+          if (!sessionMap.has(sid)) sessionMap.set(sid, { sessionId: sid, seedUrl: '', docs: [] });
+          sessionMap.get(sid)!.docs.push(doc);
+        } else {
+          legacies.push(doc);
+        }
+      }
+
+      for (const [, s] of sessionMap) {
+        s.docs.sort((a, b) => a.name.localeCompare(b.name));
+        if (!s.seedUrl && s.docs.length > 0) {
+          s.seedUrl = s.docs[0].name.replace(/\[CRAWL:\w+\]\s*/, '');
+        }
+      }
+
+      setSessions(Array.from(sessionMap.values()));
+      setLegacyDocs(legacies);
     } catch {}
   };
 
   useEffect(() => {
     loadCrawledDocs();
   }, [contextId]);
+
+  useEffect(() => {
+    if (activeJobs.size === 0) return;
+    pollRef.current = setInterval(pollJobs, 2000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [activeJobs.size]);
+
+  const pollJobs = useCallback(async () => {
+    const updates = new Map<number, ActiveJob>();
+    let anyRunning = false;
+
+    for (const [idx, aj] of activeJobs) {
+      try {
+        const job = await getCrawlJobStatus(aj.jobId);
+        updates.set(idx, { ...aj, job });
+        if (job.status === 'running') anyRunning = true;
+      } catch {
+        updates.set(idx, aj);
+      }
+    }
+
+    setActiveJobs(updates);
+
+    if (!anyRunning) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      loadCrawledDocs();
+      onCrawlComplete();
+    }
+  }, [activeJobs]);
 
   const addUrl = () => {
     if (!newUrl.trim()) return;
@@ -77,17 +155,26 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
         crawlMode,
         maxDepth: crawlMode === 'depth' ? maxDepth : undefined,
       });
+
       const done = [...updated];
-      done[index] = {
-        ...done[index],
-        status: 'success',
-        contentLength: result.contentLength,
-        documentId: result.documentId,
-        pagesCrawled: result.pagesCrawled,
-      };
+
+      if (result.async) {
+        done[index] = { ...done[index], status: 'success', jobId: result.jobId, sessionId: result.sessionId, pagesCrawled: 0 };
+        setActiveJobs(new Map(activeJobs).set(index, { jobId: result.jobId, index }));
+      } else {
+        done[index] = {
+          ...done[index],
+          status: 'success',
+          contentLength: result.contentLength,
+          documentId: result.documentId,
+          pagesCrawled: result.pagesCrawled,
+          sessionId: result.sessionId,
+        };
+        onCrawlComplete();
+        loadCrawledDocs();
+      }
+
       setUrls(done);
-      onCrawlComplete();
-      loadCrawledDocs();
     } catch (err: any) {
       const failed = [...updated];
       failed[index] = { ...failed[index], status: 'error', error: err.response?.data?.message || err.message };
@@ -104,16 +191,45 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
     setLoading(false);
   };
 
-  const handleDeleteCrawl = async (docId: string) => {
-    if (!confirm('Hapus crawl ini?')) return;
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm('Hapus semua hasil crawl dalam sesi ini?')) return;
     try {
-      await deleteDocument(docId);
-      setCrawledDocs(crawledDocs.filter((d) => d.id !== docId));
+      await deleteCrawlSession(contextId, sessionId);
+      loadCrawledDocs();
       onCrawlComplete();
     } catch {}
   };
 
-  const extractUrl = (name: string) => name.replace('[CRAWL]', '').trim();
+  const handleDeleteSingleDoc = async (docId: string) => {
+    try {
+      await deleteDocument(docId);
+      loadCrawledDocs();
+      onCrawlComplete();
+    } catch {}
+  };
+
+  const handleDeleteLegacy = async (docId: string) => {
+    if (!confirm('Hapus crawl ini?')) return;
+    try {
+      await deleteDocument(docId);
+      loadCrawledDocs();
+      onCrawlComplete();
+    } catch {}
+  };
+
+  const toggleSession = (sid: string) => {
+    setExpandedSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid); else next.add(sid);
+      return next;
+    });
+  };
+
+  const getJobProgress = (idx: number) => {
+    const aj = activeJobs.get(idx);
+    if (!aj?.job) return null;
+    return aj.job;
+  };
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -147,7 +263,7 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
               )}
             >
               <p className="text-xs font-semibold text-bc-text-dark">Berdasarkan Kedalaman</p>
-              <p className="text-[10px] text-bc-text-muted mt-0.5">Crawl halaman + link internal sesuai tingkat kedalaman</p>
+              <p className="text-[10px] text-bc-text-muted mt-0.5">Crawl halaman + link internal sesuai kedalaman</p>
             </button>
             <button
               type="button"
@@ -238,59 +354,79 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
           </div>
 
           <div className="space-y-2">
-            {urls.map((item, i) => (
-              <div key={i} className="rounded-xl border border-bc-border bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <div className={clsx(
-                    'mt-0.5 flex h-6 w-6 items-center justify-center rounded-full shrink-0',
-                    item.status === 'success' ? 'bg-green-100' :
-                    item.status === 'error' ? 'bg-red-100' :
-                    item.status === 'loading' ? 'bg-blue-100' :
-                    'bg-gray-100',
-                  )}>
-                    {item.status === 'success' ? <CheckCircle size={14} className="text-green-600" /> :
-                     item.status === 'error' ? <XCircle size={14} className="text-red-500" /> :
-                     item.status === 'loading' ? <Loader2 size={14} className="text-blue-500 animate-spin" /> :
-                     <Link size={14} className="text-gray-400" />}
-                  </div>
+            {urls.map((item, i) => {
+              const job = getJobProgress(i);
+              const isAsyncRunning = !!job && job.status === 'running';
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-bc-text-dark">{item.title}</p>
-                    <p className="text-xs text-bc-primary truncate mt-0.5">{item.url}</p>
+              return (
+                <div key={i} className="rounded-xl border border-bc-border bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={clsx(
+                      'mt-0.5 flex h-6 w-6 items-center justify-center rounded-full shrink-0',
+                      isAsyncRunning ? 'bg-blue-100' :
+                      item.status === 'success' ? 'bg-green-100' :
+                      item.status === 'error' ? 'bg-red-100' :
+                      item.status === 'loading' ? 'bg-blue-100' :
+                      'bg-gray-100',
+                    )}>
+                      {isAsyncRunning ? <Loader2 size={14} className="text-blue-500 animate-spin" /> :
+                       item.status === 'success' ? <CheckCircle size={14} className="text-green-600" /> :
+                       item.status === 'error' ? <XCircle size={14} className="text-red-500" /> :
+                       item.status === 'loading' ? <Loader2 size={14} className="text-blue-500 animate-spin" /> :
+                       <Link size={14} className="text-gray-400" />}
+                    </div>
 
-                    {item.status === 'success' && (
-                      <div className="mt-2 flex items-center gap-3 text-[10px] text-bc-text-muted">
-                        <span className="flex items-center gap-1"><FileText size={10} /> {(item.contentLength || 0).toLocaleString()} chars</span>
-                        <span className="font-mono">{item.documentId}</span>
-                        {item.pagesCrawled && item.pagesCrawled > 1 && (
-                          <span className="flex items-center gap-1 text-bc-primary"><Layers size={10} /> {item.pagesCrawled} halaman</span>
-                        )}
-                      </div>
-                    )}
-                    {item.status === 'error' && (
-                      <p className="mt-1 text-xs text-red-500">{item.error}</p>
-                    )}
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-bc-text-dark">{item.title}</p>
+                      <p className="text-xs text-bc-primary truncate mt-0.5">{item.url}</p>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {item.status !== 'loading' && item.status !== 'success' && (
-                      <button
-                        onClick={() => crawlSingle(i)}
-                        className="rounded-lg px-3 py-1.5 text-xs text-bc-primary hover:bg-bc-primary/10"
-                      >
-                        Crawl
+                      {isAsyncRunning && job && (
+                        <div className="mt-2 space-y-1.5">
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <span className="text-blue-600 font-medium">Sedang crawling...</span>
+                            <span className="text-bc-text-muted">{job.processed}/{job.totalFound} halaman ({job.succeeded} OK, {job.failed} gagal)</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                            <div
+                              className="h-full bg-bc-primary rounded-full transition-all duration-500"
+                              style={{ width: `${job.totalFound > 0 ? (job.processed / job.totalFound) * 100 : 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {item.status === 'success' && !isAsyncRunning && job && (
+                        <div className="mt-2 flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1 text-green-600 font-medium"><CheckCircle size={10} /> Selesai</span>
+                          <span className="flex items-center gap-1 text-bc-primary"><Layers size={10} /> {job.succeeded} berhasil</span>
+                          {job.failed > 0 && <span className="text-red-500">{job.failed} gagal</span>}
+                        </div>
+                      )}
+
+                      {item.status === 'success' && !job && (
+                        <div className="mt-2 flex items-center gap-3 text-[10px] text-bc-text-muted">
+                          <span className="flex items-center gap-1"><FileText size={10} /> {(item.contentLength || 0).toLocaleString()} chars</span>
+                          {item.pagesCrawled && item.pagesCrawled > 1 && (
+                            <span className="flex items-center gap-1 text-bc-primary"><Layers size={10} /> {item.pagesCrawled} halaman</span>
+                          )}
+                        </div>
+                      )}
+
+                      {item.status === 'error' && <p className="mt-1 text-xs text-red-500">{item.error}</p>}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item.status !== 'loading' && item.status !== 'success' && !isAsyncRunning && (
+                        <button onClick={() => crawlSingle(i)} className="rounded-lg px-3 py-1.5 text-xs text-bc-primary hover:bg-bc-primary/10">Crawl</button>
+                      )}
+                      <button onClick={() => removeUrl(i)} disabled={isAsyncRunning} className="rounded-lg p-1.5 text-bc-text-muted hover:bg-red-50 hover:text-red-500 disabled:opacity-30">
+                        <XCircle size={14} />
                       </button>
-                    )}
-                    <button
-                      onClick={() => removeUrl(i)}
-                      className="rounded-lg p-1.5 text-bc-text-muted hover:bg-red-50 hover:text-red-500"
-                    >
-                      <XCircle size={14} />
-                    </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 flex items-start gap-2">
@@ -299,51 +435,107 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
               <p className="font-medium">Catatan:</p>
               <ul className="mt-1 space-y-0.5 text-yellow-700">
                 <li>• <strong>Halaman Tunggal</strong> — hanya mengekstrak konten dari URL yang dimasukkan</li>
-                <li>• <strong>Berdasarkan Kedalaman</strong> — mengikuti link internal hingga tingkat kedalaman yang ditentukan</li>
-                <li>• <strong>Crawl Penuh</strong> — menjelajahi seluruh halaman pada domain yang sama (maks. 500 halaman)</li>
-                <li>• Konten akan otomatis di-chunk dan di-vectorisasi</li>
-                <li>• Hasil crawl ditandai dengan prefix [CRAWL] di nama dokumen</li>
+                <li>• <strong>Berdasarkan Kedalaman</strong> — mengikuti link internal hingga kedalaman tertentu (berjalan di background)</li>
+                <li>• <strong>Crawl Penuh</strong> — menjelajahi seluruh domain (berjalan di background, maks. 500)</li>
+                <li>• Konten otomatis di-chunk dan di-vectorisasi</li>
               </ul>
             </div>
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-bc-text-dark flex items-center gap-2">
-          <Globe size={16} className="text-bc-primary" />
-          Crawl Tersimpan ({crawledDocs.length})
-        </h3>
-        {crawledDocs.length === 0 ? (
-          <p className="text-xs text-bc-text-muted py-4 text-center">Belum ada crawl site untuk context ini.</p>
-        ) : (
-          <div className="space-y-2">
-            {crawledDocs.map((doc) => (
-              <div key={doc.id} className="group flex items-center gap-3 rounded-xl border border-bc-border bg-white p-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bc-primary/10 shrink-0">
-                  <Globe size={14} className="text-bc-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-bc-text-dark truncate">{extractUrl(doc.name)}</p>
-                  <p className="text-[10px] text-bc-text-muted mt-0.5">
-                    {doc.status === 'READY' ? (
-                      <span className="text-green-600">{doc.vectorCount} chunks · Ready</span>
-                    ) : (
-                      <span>{doc.status}</span>
-                    )}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleDeleteCrawl(doc.id)}
-                  className="shrink-0 rounded-lg p-1.5 text-bc-text-muted opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+      {(sessions.length > 0 || legacyDocs.length > 0) && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-bc-text-dark flex items-center gap-2">
+              <Globe size={16} className="text-bc-primary" />
+              Hasil Crawl Tersimpan
+            </h3>
+            <button onClick={() => loadCrawledDocs()} className="rounded-lg p-1.5 text-bc-text-muted hover:bg-bc-bg-muted">
+              <RefreshCw size={14} />
+            </button>
           </div>
-        )}
-      </div>
+
+          {sessions.map((session) => {
+            const isExpanded = expandedSessions.has(session.sessionId);
+            const readyCount = session.docs.filter((d) => d.status === 'READY').length;
+
+            return (
+              <div key={session.sessionId} className="rounded-xl border border-bc-border bg-white overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3 bg-bc-bg-subtle/50">
+                  <button onClick={() => toggleSession(session.sessionId)} className="text-bc-text-muted shrink-0">
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </button>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-bc-primary/10 shrink-0">
+                    <Layers size={12} className="text-bc-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-bc-text-dark truncate">{session.seedUrl || 'Crawl Session'}</p>
+                    <p className="text-[10px] text-bc-text-muted">
+                      {session.docs.length} halaman · {readyCount} ready
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteSession(session.sessionId)}
+                    className="shrink-0 rounded-lg px-2 py-1 text-[10px] text-red-500 hover:bg-red-50 font-medium"
+                  >
+                    Hapus Semua
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <div className="divide-y divide-bc-border">
+                    {session.docs.map((doc) => (
+                      <div key={doc.id} className="group flex items-center gap-3 px-4 py-2.5 hover:bg-bc-bg-subtle/30">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-bc-primary/5 shrink-0">
+                          {doc.status === 'READY' ? <CheckCircle size={10} className="text-green-500" /> : <Loader2 size={10} className="text-blue-400 animate-spin" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-bc-text-dark truncate">{doc.name.replace(/\[CRAWL:\w+\]\s*/, '')}</p>
+                          <p className="text-[10px] text-bc-text-muted">
+                            {doc.status === 'READY' ? `${doc.vectorCount} chunks` : doc.status}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSingleDoc(doc.id)}
+                          className="shrink-0 rounded p-1 text-bc-text-muted hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {legacyDocs.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] text-bc-text-muted font-medium">Crawl Lama (tanpa sesi)</p>
+              {legacyDocs.map((doc) => (
+                <div key={doc.id} className="group flex items-center gap-3 rounded-xl border border-bc-border bg-white p-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-bc-primary/10 shrink-0">
+                    <Globe size={12} className="text-bc-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-bc-text-dark truncate">{doc.name.replace('[CRAWL]', '').trim()}</p>
+                    <p className="text-[10px] text-bc-text-muted">
+                      {doc.status === 'READY' ? <span className="text-green-600">{doc.vectorCount} chunks · Ready</span> : doc.status}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLegacy(doc.id)}
+                    className="shrink-0 rounded-lg p-1 text-bc-text-muted opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
