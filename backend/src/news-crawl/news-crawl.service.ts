@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
 import { CrawlUrlDto, BulkCrawlUrlDto } from './dto/crawl.dto';
 
-interface CrawlJob {
+export interface CrawlJob {
   id: string;
   status: 'running' | 'completed' | 'failed';
   mode: 'depth' | 'full';
