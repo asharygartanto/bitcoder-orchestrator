@@ -356,6 +356,30 @@ export class NewsCrawlService {
     return Array.from(links);
   }
 
+  private async deleteExistingCrawlByUrl(contextId: string, organizationId: string, url: string, ragUrl: string) {
+    const existingDocs = await this.prisma.document.findMany({
+      where: {
+        contextId,
+        organizationId,
+        name: { contains: '[CRAWL' },
+      },
+    });
+
+    for (const doc of existingDocs) {
+      const docUrl = doc.name.replace(/\[CRAWL[^\]]*\]\s*/, '').trim();
+      if (docUrl !== url) continue;
+
+      try {
+        await firstValueFrom(
+          this.httpService.delete(`${ragUrl}/api/documents/delete`, {
+            data: { document_id: doc.id, context_id: contextId, organization_id: organizationId },
+          }),
+        );
+      } catch {}
+      await this.prisma.document.delete({ where: { id: doc.id } }).catch(() => {});
+    }
+  }
+
   private getBaseUrl(url: string): string {
     try {
       const parsed = new URL(url);
