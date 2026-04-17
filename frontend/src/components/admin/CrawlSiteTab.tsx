@@ -217,6 +217,15 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
     } catch {}
   };
 
+  const handleDeleteAllLegacy = async () => {
+    if (!confirm(`Hapus semua ${legacyDocs.length} crawl lama?`)) return;
+    for (const doc of legacyDocs) {
+      try { await deleteDocument(doc.id); } catch {}
+    }
+    loadCrawledDocs();
+    onCrawlComplete();
+  };
+
   const toggleSession = (sid: string) => {
     setExpandedSessions((prev) => {
       const next = new Set(prev);
@@ -512,7 +521,15 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
 
           {legacyDocs.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] text-bc-text-muted font-medium">Crawl Lama (tanpa sesi)</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-bc-text-muted font-medium">Crawl Lama (tanpa sesi) — {legacyDocs.length} item</p>
+                <button
+                  onClick={handleDeleteAllLegacy}
+                  className="rounded-lg px-2 py-1 text-[10px] text-red-500 hover:bg-red-50 font-medium"
+                >
+                  Hapus Semua
+                </button>
+              </div>
               {legacyDocs.map((doc) => (
                 <div key={doc.id} className="group flex items-center gap-3 rounded-xl border border-bc-border bg-white p-3">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-bc-primary/10 shrink-0">
