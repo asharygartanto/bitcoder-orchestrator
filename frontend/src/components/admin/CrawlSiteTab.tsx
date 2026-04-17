@@ -195,35 +195,43 @@ export default function CrawlSiteTab({ contextId, onCrawlComplete }: Props) {
     if (!confirm('Hapus semua hasil crawl dalam sesi ini?')) return;
     try {
       await deleteCrawlSession(contextId, sessionId);
-      loadCrawledDocs();
+      await loadCrawledDocs();
       onCrawlComplete();
-    } catch {}
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Gagal menghapus sesi');
+    }
   };
 
   const handleDeleteSingleDoc = async (docId: string) => {
     try {
       await deleteDocument(docId);
-      loadCrawledDocs();
+      await loadCrawledDocs();
       onCrawlComplete();
-    } catch {}
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Gagal menghapus dokumen');
+    }
   };
 
   const handleDeleteLegacy = async (docId: string) => {
     if (!confirm('Hapus crawl ini?')) return;
     try {
       await deleteDocument(docId);
-      loadCrawledDocs();
+      await loadCrawledDocs();
       onCrawlComplete();
-    } catch {}
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Gagal menghapus dokumen');
+    }
   };
 
   const handleDeleteAllLegacy = async () => {
     if (!confirm(`Hapus semua ${legacyDocs.length} crawl lama?`)) return;
+    let failed = 0;
     for (const doc of legacyDocs) {
-      try { await deleteDocument(doc.id); } catch {}
+      try { await deleteDocument(doc.id); } catch { failed++; }
     }
-    loadCrawledDocs();
+    await loadCrawledDocs();
     onCrawlComplete();
+    if (failed > 0) alert(`${failed} dokumen gagal dihapus. Coba refresh halaman.`);
   };
 
   const toggleSession = (sid: string) => {
